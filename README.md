@@ -9,3 +9,8 @@ https://github.com/osrf/gazebo_models
     roslaunch simulation_environment apartment.launch
     rosrun JoyStick joystick /dev/input/js0
     rosrun move_robot move_robot /dev/ttyUSB0 115200
+
+## mi start
+    roslaunch summit_description summit.launch
+    rosrun JoyStick joystick /dev/input/js0
+    rosrun move_robot move_robot /dev/ttyUSB0 115200
