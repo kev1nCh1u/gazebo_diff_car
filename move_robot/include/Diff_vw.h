@@ -9,6 +9,8 @@ class diff_vw: public Move_Robot
 
 		ros::Subscriber Clear_ObsModeSubscriber_;
 
+		ros::Publisher cmd_vel_pub; // kevin
+
 		void RevProcess(double receive_period);
 		//Callback
 		void timerCallback(const ros::TimerEvent& event);
@@ -125,6 +127,7 @@ diff_vw::diff_vw(char* dev_name, int Baudrate):Move_Robot(dev_name, Baudrate)
 
 	std::cout<<"diff_vw"<<std::endl;
 	Clear_ObsModeSubscriber_=node_.subscribe("Clear_ObsMode", 10, &diff_vw::ClearCallback,this);
+	cmd_vel_pub = node_.advertise<geometry_msgs::Twist>("cmd_vel", 1000); // kevin
 	laserSubscriber_ = node_.subscribe("scan", 10, &diff_vw::laserCallback, this);
 	JoysickSubscriber_ = node_.subscribe("joystick", 5, &diff_vw::joystickCallback, this);
 
@@ -2949,6 +2952,15 @@ void diff_vw::joystick_move()
 
 		global_v = V_avg;
 
+		// kevin
+		geometry_msgs::Twist cmd_vel_msg;
+		cmd_vel_msg.linear.x = V_avg;
+		cmd_vel_msg.linear.y = 0;
+		cmd_vel_msg.linear.z = 0;
+		cmd_vel_msg.angular.x = 0;
+		cmd_vel_msg.angular.y = 0;
+		cmd_vel_msg.angular.z = W_rw;
+		cmd_vel_pub.publish(cmd_vel_msg);
 
 		std::vector<unsigned char> command;
 
