@@ -10,5 +10,8 @@ https://github.com/osrf/gazebo_models
     rosrun JoyStick joystick /dev/input/js0
     rosrun move_robot move_robot /dev/ttyUSB0 115200
 
-## cartograph start
-    roslaunch launch_start hokuyo_2d.launch
+## diff launch_start
+    roslaunch launch_start start.launch
+
+## create map
+    roslaunch kevin_cartographer hokuyo_2d.launch

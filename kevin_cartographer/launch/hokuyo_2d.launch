@@ -5,7 +5,7 @@
   <node name="cartographer_node"
     pkg="cartographer_ros"
     type="cartographer_node"
-    args="-configuration_directory $(find launch_start)/configuration_files -configuration_basename hokuyo_2d.lua"
+    args="-configuration_directory $(find kevin_cartographer)/configuration_files -configuration_basename hokuyo_2d.lua"
     output="screen">
   </node>
 
@@ -15,7 +15,7 @@
 
 
  <node name="rviz" pkg="rviz" type="rviz" required="true"
-      args="-d $(find launch_start)/configuration_files/demo_2d.rviz" />
+      args="-d $(find kevin_cartographer)/configuration_files/demo_2d.rviz" />
 
 
 </launch>

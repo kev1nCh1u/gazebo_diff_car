@@ -18,13 +18,13 @@
   <param name="/use_sim_time" value="true" />
 
   <node name="rviz" pkg="rviz" type="rviz" required="true"
-      args="-d $(find launch_start)/configuration_files/my_robot_3d.rviz" />
+      args="-d $(find kevin_cartographer)/configuration_files/my_robot_3d.rviz" />
 
   <node name="cartographer_offline_node" pkg="cartographer_ros"
       type="cartographer_offline_node" args="
-          -configuration_directory $(find launch_start)/configuration_files
+          -configuration_directory $(find kevin_cartographer)/configuration_files
           -configuration_basenames my_robot_3d.lua
-          -urdf_filenames $(find launch_start)/configuration_files/my_robot_3d.urdf
+          -urdf_filenames $(find kevin_cartographer)/configuration_files/my_robot_3d.urdf
           -bag_filenames $(arg bag_filenames)"
       output="screen">
     <remap from="points2_1" to="horizontal_laser_3d" />
