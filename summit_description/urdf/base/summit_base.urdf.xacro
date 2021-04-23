@@ -54,13 +54,6 @@
 
   </link>
 
-  <joint name="hokuyo_joint" type="fixed">
-    <axis xyz="0 1 0" />
-    <origin xyz="0 0 0.435" rpy="0 0 0"/>
-    <parent link="base_link"/>
-    <child link="laser_link"/>
-  </joint>
-
   <!-- Hokuyo Laser -->
   <link name="laser_link">
     <collision>
@@ -73,7 +66,8 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://summit_description/meshes/hokuyo/hokuyo.dae"/>
+        <!-- <mesh filename="package://summit_description/meshes/hokuyo/hokuyo.dae"/> -->
+    <box size="0.1 0.1 0.1"/>
       </geometry>
     </visual>
 
@@ -83,6 +77,13 @@
       <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6" />
     </inertial>
   </link>
+
+  <joint name="hokuyo_joint" type="fixed">
+    <axis xyz="0 1 0" />
+    <origin xyz="0 0 0.435" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="laser_link"/>
+  </joint>
 
   </xacro:macro>
 
