@@ -1,4 +1,4 @@
-# Gazebo sim car
+# gazebo_diff_car_ws
 
 ## gazebo models download
 https://github.com/osrf/gazebo_models
@@ -7,10 +7,5 @@ https://github.com/osrf/gazebo_models
     
 ## diff start
     roslaunch simulation_environment apartment.launch
-    rosrun JoyStick joystick /dev/input/js0
-    rosrun move_robot move_robot /dev/ttyUSB0 115200
-
-## mi start
-    roslaunch summit_description summit.launch
     rosrun JoyStick joystick /dev/input/js0
     rosrun move_robot move_robot /dev/ttyUSB0 115200
