@@ -11,4 +11,4 @@ https://github.com/osrf/gazebo_models
     rosrun move_robot move_robot /dev/ttyUSB0 115200
 
 ## cartograph start
-    
+    roslaunch launch_start hokuyo_2d.launch
