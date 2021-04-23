@@ -1,0 +1,10 @@
+<launch>
+
+    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock /home/user/rosbags/3d/0112C2.bag">
+
+        <remap from="velodyne_points" to="points2" />
+
+    </node>
+
+</launch>
+
