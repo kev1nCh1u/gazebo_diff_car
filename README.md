@@ -4,7 +4,7 @@
 https://github.com/osrf/gazebo_models
 
     ./gazebo_ws/src/download_gazebo_models/download.sh
-    
+
 ## diff start
     roslaunch simulation_environment apartment.launch
     rosrun JoyStick joystick /dev/input/js0
@@ -15,3 +15,6 @@ https://github.com/osrf/gazebo_models
 
 ## create map
     roslaunch kevin_cartographer hokuyo_2d.launch
+
+## reference
+https://bitbucket.org/DataspeedInc/velodyne_simulator/src/master/
