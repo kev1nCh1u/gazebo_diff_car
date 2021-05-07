@@ -16,5 +16,8 @@ https://github.com/osrf/gazebo_models
 ## create map
     roslaunch kevin_cartographer hokuyo_2d.launch
 
+## gazebo velodyne example
+roslaunch velodyne_description example.launch
+
 ## reference
 https://bitbucket.org/DataspeedInc/velodyne_simulator/src/master/
