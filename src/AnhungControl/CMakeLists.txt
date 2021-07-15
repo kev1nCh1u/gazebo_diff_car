@@ -8,7 +8,7 @@ project(AnhungControl)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  qt_build
+#  qt_build
   roscpp
   rospy
   std_msgs
@@ -17,6 +17,14 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   roslib
 )
+
+find_package(qt_build)
+if(qt_build_FOUND)
+  add_definitions(-DQT_FLAG)
+  rosbuild_prepare_qt4(QtCore QtGui)
+else()
+  
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake-modules)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -154,7 +162,7 @@ ${MYSQL_INCLUDE_DIRS}
 add_definitions(${MYSQL_DEFINITIONS})
 
 
-rosbuild_prepare_qt4(QtCore QtGui)
+# rosbuild_prepare_qt4(QtCore QtGui)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -237,8 +245,12 @@ rosbuild_prepare_qt4(QtCore QtGui)
 
 add_executable(AnhungControl src/AnhungControl.cpp)
 
+if(qt_build_FOUND)
+  target_link_libraries(AnhungControl ${QT_LIBRARIES})
+endif()
+
 target_link_libraries(AnhungControl
-  ${QT_LIBRARIES} 
+#  ${QT_LIBRARIES} 
   ${catkin_LIBRARIES}
 ${MYSQL_LIBRARIES}
 )

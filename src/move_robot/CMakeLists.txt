@@ -8,7 +8,7 @@ add_compile_options(-std=c++11)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-set(OpenCV_DIR /usr/share/OpenCV)
+set(OpenCV_DIR /home/kevin/lib/opencv/opencv3/build)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   OpenCV

@@ -1,9 +1,15 @@
 # gazebo_diff_car_ws
 
 ## gazebo models download
-https://github.com/osrf/gazebo_models
 
-    ./gazebo_ws/src/download_gazebo_models/download.sh
+### reference
+https://github.com/osrf/gazebo_models
+https://bitbucket.org/DataspeedInc/velodyne_simulator/src/master/
+https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
+
+#### install
+    mkdir .gazebo/models/
+    ./download_gazebo_models/download.sh
 
 ## diff start
     roslaunch simulation_environment apartment.launch
@@ -17,7 +23,14 @@ https://github.com/osrf/gazebo_models
     roslaunch kevin_cartographer hokuyo_2d.launch
 
 ## gazebo velodyne example
-roslaunch velodyne_description example.launch
+    roslaunch velodyne_description example.launch
 
-## reference
-https://bitbucket.org/DataspeedInc/velodyne_simulator/src/master/
+## install
+    sudo apt install cppad
+    sudo apt-get install ros-<version>-ifopt
+
+### Ipopt
+    sudo apt-get install gfortran
+    sudo apt-get install unzip
+    wget https://www.coin-or.org/download/source/Ipopt/Ipopt-3.12.7.zip && unzip Ipopt-3.12.7.zip && rm Ipopt-3.12.7.zip
+    sudo ./install_ipopt.sh Ipopt-3.12.7

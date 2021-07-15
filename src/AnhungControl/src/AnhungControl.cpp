@@ -73,12 +73,20 @@ Control::Control(char *address, char *SRV_IP, int port)
 	char *imagePATH_buf = const_cast<char *>(imagePATH.c_str());
 
 	Mapname = Lc_par.map_name;
-	QImage map_image;
-	map_image = QImage(imagePATH_buf);
+	
+#ifdef QT_FLAG
+	// QImage map_image;
+	// map_image = QImage(imagePATH_buf);
 
+	// max_map_width = map_image.width();
+	// max_map_height = map_image.height();
+#endif
 
-	max_map_width = map_image.width();
-	max_map_height = map_image.height();
+#ifndef QT_FLAG
+	max_map_width = 0;
+	max_map_height = 0;
+#endif
+
 	m_resolution = float(50.0)/1000;
 	Eigen::Vector2f StartCoord(float(max_map_width)*0.50*m_resolution , float(max_map_height)*0.50*m_resolution);
 	setMapTransformation(StartCoord, m_resolution);
