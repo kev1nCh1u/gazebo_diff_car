@@ -9,13 +9,13 @@ https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
 
 #### install
     mkdir .gazebo/models/
-
+    https://github.com/kevin01yaya/gazebo_models
 ## diff start
     roslaunch simulation_environment apartment.launch
     rosrun JoyStick joystick /dev/input/js0
     rosrun move_robot move_robot /dev/ttyUSB0 115200
 
-## diff launch_start
+## diff start all
     roslaunch launch_start start.launch
 
 ## create map
