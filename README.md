@@ -9,7 +9,6 @@ https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
 
 #### install
     mkdir .gazebo/models/
-    ./download_gazebo_models/download.sh
 
 ## diff start
     roslaunch simulation_environment apartment.launch

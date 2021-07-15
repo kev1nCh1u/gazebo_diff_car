@@ -1,8 +1,0 @@
-<launch>
-
-    <node pkg="rosbag" type="play" name="player" output="screen" args="--clock /home/user/rosbags/2d/2021-01-29-20-05-03.bag">
-
-    </node>
-
-</launch>
-
