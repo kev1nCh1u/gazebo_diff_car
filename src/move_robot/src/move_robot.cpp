@@ -1,7 +1,11 @@
 #include "move_robot.h"
-#include "MPC_Diff_vw.h"
-#include "Diff_vw.h"
-#include "Diff_vw_A.h"
+#include "AllDir.h"
+#include "OneWheel_vw.h"
+#include "test_package.h"
+//#include "DiffV.h"
+//#include "boling.h"
+//#include "Diff_vlvr.h"
+//#include "Diff_vw.h"
 
 
 
@@ -11,7 +15,7 @@ int main(int argc, char **argv)
     ros::Time::init();
     ros::NodeHandle now;
     ros::Subscriber TriggerSubscriber_=now.subscribe("Trigger", 5, TriggerCallback);
-    int CarKind;		//車種()
+    int CarKind= -1;;		//車種()
 
 
     if(argc < 3){
@@ -24,7 +28,8 @@ int main(int argc, char **argv)
 
 
 
-    int baudrate = std::atoi(argv[2]);
+    baudrate = std::atoi(argv[2]);
+    argv_buf = argv;
 
     LoadTitlePath();
     CarParameterPATH = TitlePath + CarParameterPATH_Local;
@@ -39,29 +44,8 @@ int main(int argc, char **argv)
         ros::spinOnce();
     }
 
-    switch(CarKind){
+    kind_search(CarKind, argv_buf, baudrate);
 
-      case 3:
-               std::cout<<"CarKind = Diff_vw  "<<std::endl;
-               diff_vw_A *Diff_vw_A;
-               Diff_vw_A = new diff_vw_A(argv[1], baudrate);
-          break;
-
-        case 4:
-                 std::cout<<"CarKind = Diff_vw  "<<std::endl;
-                 diff_vw *Diff_vw;
-                 Diff_vw = new diff_vw(argv[1], baudrate);
-            break;
-
-	    case 5:
-                 std::cout<<"CarKind = MPC_DIFF_vw  "<<std::endl;
-                 mpc_diff_vw *MPC_Diff_vw;
-                 MPC_Diff_vw = new mpc_diff_vw(argv[1], baudrate);
-            break;
-
-            default:
-            break;
-    }
 
     ros::spin();
 
@@ -72,15 +56,18 @@ int main(int argc, char **argv)
 void TriggerCallback(const std_msgs::Int8& msg)
 {
     int Trigger = msg.data;
+    int CarKind = -1;
 
     switch(Trigger){
             case ReloadCarParameter:
                  ReloadCarKind = true;
+                 ROS_INFO("ReloadCarParameter!!");
+                 LoadCarKind(CarParameterPATH,CarKind);
+                 kind_search(CarKind, argv_buf, baudrate);
             break;
 
             default:
             break;
-
     }
 }
 bool LoadCarKind(std::string file_buf,int &returnbuf)
@@ -135,7 +122,29 @@ void LoadTitlePath()
         count++;
     }
 
-	TitlePath = "/" + recv_pkg[1] + "/" + recv_pkg[2] + "/" + recv_pkg[3] + "/" + recv_pkg[4];
+	TitlePath = "/" + recv_pkg[1] + "/" + recv_pkg[2] + "/" + recv_pkg[3]+ "/" + recv_pkg[4];
 	std::cout<<"TitlePath  " <<TitlePath <<std::endl;
 
+}
+void kind_search(int CarKind ,char **argv ,int baudrate)
+{
+    switch(CarKind){
+            case 0:
+                 std::cout<<"CarKind = four  "<<std::endl;
+                 alldir *four_wheel;
+                 four_wheel = new alldir(argv[1], baudrate);
+            break;
+            case 1:
+                 std::cout<<"CarKind = one  "<<std::endl;
+                 onewheel_vw *one_wheel;
+                 one_wheel = new onewheel_vw(argv[1], baudrate);
+            break;
+            case 2:
+                 std::cout<<"CarKind = test  "<<std::endl;
+                 test_package *test_pack;
+                 test_pack = new test_package(argv[1], baudrate);
+            break;
+            default:
+            break;
+    }
 }

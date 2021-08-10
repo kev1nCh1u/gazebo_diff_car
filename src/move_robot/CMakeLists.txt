@@ -2,17 +2,13 @@ cmake_minimum_required(VERSION 2.8.3)
 project(move_robot)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+# add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-
-set(OpenCV_DIR /home/kevin/lib/opencv/opencv3/build)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
-  OpenCV
-  cv_bridge
   roscpp
   rospy
   tf
@@ -25,8 +21,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 
 find_package(Eigen3)
-find_package(OpenCV REQUIRED)
-
 if(NOT EIGEN3_FOUND)
   # Fallback to cmake_modules
   find_package(cmake_modules REQUIRED)
@@ -80,8 +74,8 @@ endif()
 traffic_recv.msg
        state.msg
 Battery.msg
+qrcode.msg
 setmap_ctr.msg
-
  )
 
 ## Generate services in the 'srv' folder
@@ -137,7 +131,7 @@ std_msgs
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES move_robot
-  CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs message_runtime cv_bridge
+  CATKIN_DEPENDS geometry_msgs roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -151,7 +145,6 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
 )
 
 
@@ -238,8 +231,6 @@ add_executable(move_robot src/move_robot.cpp)
 
 target_link_libraries(move_robot 
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-ipopt
 )
 
 add_dependencies(move_robot move_robot)

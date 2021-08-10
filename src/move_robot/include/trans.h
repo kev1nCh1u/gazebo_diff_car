@@ -74,7 +74,7 @@ void trans::closeline(Eigen::Vector3f finial_target_pose, Eigen::Vector3f target
 
         m_error = normalize_Line.transpose() * robot_p;
 
-//std::cout<<"m_error  "<<m_error<<std::endl;
+std::cout<<"m_error  "<<m_error<<std::endl;
 
         
 }

@@ -1,4 +1,3 @@
-
 #include <string>
 #include <math.h>
 #include <unistd.h>
@@ -29,24 +28,25 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
 #include <sensor_msgs/LaserScan.h>
 #include <laser_geometry/laser_geometry.h>
 #include <std_msgs/Int32MultiArray.h>
+#include <std_msgs/Int32.h>//qrcode use
 #include <std_msgs/Int16.h>
 #include <std_msgs/Int8.h>
 #include <std_msgs/Float32.h>
-#include <std_msgs/String.h>
 
 
 #include <move_robot/joystick.h>
 #include <move_robot/Node_recv.h>
 #include <move_robot/traffic_recv.h>
 #include <move_robot/state.h>
+#include <move_robot/qrcode.h>
 #include <move_robot/setmap_ctr.h>
 #include "trans.h"
 #include "kinematics.h"
 #include "sendrev.h"
-#include "MPC.h"
 
 
 
@@ -76,6 +76,12 @@
 
 #define P_STATE_AVOID_DEADLOCK 9
 #define P_STATE_TIME_DELAY 10
+#define P_STATE_QRCODE 11
+#define P_STATE_LEFT 12
+#define P_STATE_RIGHT 13
+#define P_STATE_BACK_LEFT 14
+#define P_STATE_BACK_RIGHT 15
+#define P_STATE_BACK 16
 
 
 #define P_OBS_NORMAL 0
@@ -102,6 +108,12 @@
 #define MISSON_Elevator_Entrance 11
 #define MISSON_Elevator_Inside 12
 #define MISSON_Samefloor_ChangeMap 13
+#define MISSON_qrcode 14
+#define MISSON_turn_left 15
+#define MISSON_turn_right 16
+#define MISSON_turn_back_left 17
+#define MISSON_turn_back_right 18
+#define MISSON_back_tracking 19
 
 
 #define Command_STATE_IDLE 0
@@ -116,21 +128,23 @@
 #define Command_Elevator_Entrance 9
 #define Command_Elevator_Inside 10
 #define Command_Samefloor_ChangeMap 11
+#define Command_STATE_qrcode 12
 
 #define Clear_Mode 1
 #define Close_AllObs 2
 #define limitObs_Mode 3
 #define Normal_Mode 4
 #define Temporary_Mode 5
+#define Stop_Turn 6
 
 #define ReloadCarParameter 0
+#define ReloadLocalParameter 1
 
 #define TrackingLineMarker 0
 #define AvoidLineMarker 1
 #define ALLOBSPointMarker 2
 #define OBSPointMarker 3
 #define obs_line_pointMarker 4
-#define predict_line_pointMarker 5
 
 #define obs_LineMarker 0
 #define vertical_lineMarker 1
@@ -163,9 +177,12 @@ struct NODE_recv{				//Jeff add
 	int time;
 	bool btn_finish;
 	int line;
-    float radius;
-    std::string map;
-    int floor;
+  float radius;
+	std::string map;
+	int floor;
+	bool use_backtra;
+	float turn_time;
+	float turn_R;
 
 	Eigen::Vector3f node_pose;
 };
@@ -175,8 +192,8 @@ struct SUB_MISSONPATH_SUBPOINT{	//Jeff add
 	int start_type;
 	int end_type;
 	int end;
-    std::string map;
-    int floor;
+	int floor;
+	std::string map;
 	std::vector<Eigen::Vector3f> sub_missonPath_subPoint;
 };
 
@@ -267,10 +284,10 @@ public:
 	//Calculate
 	//void Calculate_odom();
 	int calc_target_index(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index);
+	int calc_back_target_index(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index);
 	int calc_target_index_obs(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index);
 	int calc_target_index_obsturn(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index);
     int calc_target_index_key(Eigen::Vector3f &robot_pose, float &dis, std::vector<Eigen::Vector3f> &subpath, int &now_index);
-    int calc_target_index_MPC(Eigen::Vector3f &robot_pose,  std::vector<Eigen::Vector3f> &subpath, int &now_index);
 
 	//joystick
 	//void joystick_move();
@@ -295,7 +312,7 @@ public:
 	//void ClearCallback(const std_msgs::Int8& msg);
 	void MissMsgCallback(const std_msgs::Int16& msg);
 	void TriggerCallback_(const std_msgs::Int8& msg);
-    void floorCallback_(const std_msgs::Int8& msg);
+	void floorCallback_(const std_msgs::Int8& msg);
 
 
 
@@ -306,26 +323,24 @@ public:
     void drawLine(int id,float color_r,float color_g,float color_b,std::vector<Eigen::Vector3f> drawline);
     int SetLocalpar(std::string file_buf);
 
-    double polyeval(Eigen::VectorXd coeffs, double x);
-    Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,int order);
+
 
 protected:
 	Car_Kinematics Car;
 	trans tra;
     sendrev sendreceive;
-    MPC mpc;
 
 	//ROS Subscriber & Publisher
 	ros::NodeHandle node_;
 	ros::Publisher marker_Publisher_;
 	ros::Publisher odometry_Publisher_;
 	ros::Publisher Error_Publisher_;
+	ros::Publisher mission_dis_Publisher_;
 	ros::Publisher v_Publisher_;
 	ros::Publisher STATE_Publisher_;
 	ros::Publisher ReMissionState_Publisher_;
   ros::Publisher marke_Publisher_ ;
-  ros::Publisher Command_Publisher_;
-	ros::Publisher Speak_Publisher_;
+	ros::Publisher Command_Publisher_;
 
 	ros::Subscriber JoysickSubscriber_;
 	ros::Subscriber slamoutSubscriber_;
@@ -333,11 +348,13 @@ protected:
 	ros::Subscriber laserSubscriber_;
 	ros::Subscriber IdTypeSubscriber_;
 	ros::Subscriber TrafficGOSubscriber_;
+	ros::Subscriber TrafficGOSubscriber_test_;
 //	ros::Subscriber Clear_ObsModeSubscriber_;
 	ros::Subscriber MissMsgSubscriber_;
 	ros::Subscriber TriggerSubscriber_;
-    ros::Subscriber floorSubscriber_;
-
+	ros::Subscriber qrcodeSubscriber_;
+	ros::Subscriber floorSubscriber_;
+	ros::Subscriber commandSubscriber_;
 
 
 
@@ -368,17 +385,18 @@ protected:
 	std::string CarName;	//車子名稱
 	int Carnumber;
     int	CarKind;
-    float CarLength;
-    float CarWidth;
-    float LRWheeldis;
-    float FBWheeldis;
-    float LWheeldis;
-    float Wheel_r;
-    float Reduction_Ratio;
-    float speedup;
+    	float CarLength;
+    	float CarWidth;
+    	float LRWheeldis;
+    	float FBWheeldis;
+    	float LWheeldis;
+    	float Wheel_r;
+    	float Reduction_Ratio;
+    	float speedup;
 	float speed;
 	//JOYSTICK
 	float JOYSTICK_SCALAR;
+	float remember_JOYSTICK_SCALAR;
 	//OBS
 	float OBS_Front;
 	float OBS_Side;
@@ -388,9 +406,9 @@ protected:
 	float OBS_Theta_Sec;
 
 	float CarLength_helf ;
-    float CarWidth_helf ;
-    float LRWheeldis_helf ;
-    float FBWheeldis_helf ;
+    	float CarWidth_helf ;
+    	float LRWheeldis_helf ;
+    	float FBWheeldis_helf ;
 	float traffic_dis;
 	float reMission_time;
 
@@ -436,8 +454,10 @@ protected:
 	//tracking
 	int p_state_;
 	int ready_path_index;
+	float W_rw;
+	float V_rv;
 	std::vector<int> rpm;
-    std::vector<int> theta;
+  std::vector<int> theta;
 	int now_path_index;
 	int now_A_misson;
 	int isALLfinish;
@@ -461,8 +481,8 @@ protected:
     float time_delay_counter;
     float time_delay_limit;
 
-	bool ChangToTraffic;
-	bool ChangToTraffic_finishstop;
+		bool ChangToTraffic;
+		bool ChangToTraffic_finishstop;
 
 
 	//error
@@ -472,17 +492,23 @@ protected:
 	bool protect_erase;
 	bool v_stop ;
 	bool traffic_send;
-
-
-    //電梯
-    bool ElevatorGO;
-    int floor;
-		bool changemap_finish;
-
-
-
-
-
+	//電梯
+	bool ElevatorGO;
+	int floor;
+	bool changemap_finish;
+  //qr_code
+  bool isReveice_qrcode;
+	int16_t qrcode_tag;
+	int32_t qrcode_x;
+	int16_t qrcode_y;
+	int16_t qrcode_A;
+	bool teensy_finish;
+	bool back_trajectory;//後退導航
+	bool type19_use;//type 19用
+	bool turn_use_backtra;
+	float teensy_turn_time;
+	float teensy_turn_R;
+  float Rev_V,Rev_W;
 
 
 };
@@ -491,8 +517,23 @@ Move_Robot::Move_Robot(char *dev_name, int Baudrate)
 {
     // LoadTitlePath();
     // CarParameterPATH = TitlePath + CarParameterPATH_Local;
-	ChangToTraffic = false;
-	ChangToTraffic_finishstop = false;
+		back_trajectory = false;
+		type19_use = false;
+		turn_use_backtra = false;
+		teensy_turn_time = 0.0;
+		teensy_turn_R = 0.0;
+		//qrcode
+		isReveice_qrcode = false;
+		teensy_finish = false;
+		qrcode_tag = 0;
+		qrcode_x  = 0;
+		qrcode_y = 0;
+		qrcode_A = 0;
+		Rev_V = 0.0;
+		Rev_W = 0.0;
+		//qrcode
+		ChangToTraffic = false;
+		ChangToTraffic_finishstop = false;
     //local_parameter
     tracking_kp = 0.0;
     tracking_kd = 0.0;
@@ -542,7 +583,8 @@ Move_Robot::Move_Robot(char *dev_name, int Baudrate)
 
     LoadCarParameter(CarParameterPATH);
 
-
+		W_rw = 0;
+		V_rv = 0;
     for(int i=0;i<4;i++)
     {
         rpm.push_back(0);
@@ -602,22 +644,22 @@ Move_Robot::Move_Robot(char *dev_name, int Baudrate)
     protect_erase = false;
 
     v_stop = false;
-
-    //電梯
+		//電梯
     ElevatorGO = false;
-    floor = -1;
+    //send_changemap = false;
+		floor = -1;
 		changemap_finish = false;
 
     //ROS Subscriber & Publisher
     odometry_Publisher_ = node_.advertise<geometry_msgs::PoseStamped>("odom_speed", 1);
     Error_Publisher_= node_.advertise<std_msgs::Int8>("Error",10);
     v_Publisher_ = node_.advertise<std_msgs::Float32>("v", 5);
+		mission_dis_Publisher_ = node_.advertise<std_msgs::Float32>("mission_dis", 5);
     //marker_Publisher_ = node_.advertise<visualization_msgs::Marker>("OBS_Marker", 1);
     STATE_Publisher_ = node_.advertise<move_robot::state>("STATE", 10);
     ReMissionState_Publisher_= node_.advertise<std_msgs::Int8>("ReMissionState", 10);
     marke_Publisher_ = node_.advertise<visualization_msgs::Marker>("visualization_marker", 10);
-    Command_Publisher_ = node_.advertise<move_robot::setmap_ctr>("Command",10);
-		Speak_Publisher_ = node_.advertise<std_msgs::String>("speak",10);
+		Command_Publisher_ = node_.advertise<move_robot::setmap_ctr>("Command",10);
 
     //JoysickSubscriber_ = node_.subscribe("joystick", 5, &Move_Robot::joystickCallback, this);
     slamoutSubscriber_ = node_.subscribe("slam_out_pose", 5, &Move_Robot::slamoutCallback, this);
@@ -628,8 +670,7 @@ Move_Robot::Move_Robot(char *dev_name, int Baudrate)
     //Clear_ObsModeSubscriber_=node_.subscribe("Clear_ObsMode", 5, &Move_Robot::ClearCallback, this);
     MissMsgSubscriber_ = node_.subscribe("Missing", 5, &Move_Robot::MissMsgCallback, this);
     TriggerSubscriber_=node_.subscribe("Trigger", 5, &Move_Robot::TriggerCallback_, this);
-    floorSubscriber_=node_.subscribe("floor", 10, &Move_Robot::floorCallback_, this);
-
+		floorSubscriber_=node_.subscribe("floor", 10, &Move_Robot::floorCallback_, this);
 
 
 
@@ -650,6 +691,32 @@ Move_Robot::~Move_Robot()
          delete receive_thread_;
     if(receive_Battery_thread_)
          delete receive_Battery_thread_;
+}
+
+void Move_Robot::floorCallback_(const std_msgs::Int8& msg)
+{
+		std::cout<<"==================================floorCallback_======================"<<std::endl;
+		int floor_loc = msg.data;
+		if(floor_loc != 100) floor = floor_loc;
+		switch(floor_loc)
+		{
+				case 1:
+					std::cout<<"floor one arrived"<<std::endl;
+                    //floor = floor_loc;
+				break;
+				case 8:
+                    std::cout<<"floor eight arrived  "<<floor_loc<<std::endl;
+                    //floor = floor_loc;
+				break;
+
+				case 100:
+					std::cout<<"finish change"<<std::endl;
+                    changemap_finish = true;
+				break;
+
+				default:
+				break;
+		}
 }
 
 int Move_Robot::setBaudrate(int baudrate)
@@ -684,6 +751,8 @@ int Move_Robot::setBaudrate(int baudrate)
         return B19200;
     else if(baudrate == 38400)
         return B38400;
+		else if(baudrate == 57600)
+		    return B57600;
     else if(baudrate == 115200)
         return B115200;
     else
@@ -833,7 +902,7 @@ void Move_Robot::LoadCarParameter(std::string file_buf)
         std::getline(fin, s_JOYSTICK_SCALAR);
         std::getline(fin, s_JOYSTICK_SCALAR);
         JOYSTICK_SCALAR = std::atof(s_JOYSTICK_SCALAR.c_str());
-
+				remember_JOYSTICK_SCALAR = JOYSTICK_SCALAR;
 
         //OBS
 
@@ -1015,42 +1084,20 @@ int Move_Robot::checkDeviceNum(const sensor_msgs::LaserScan& scan)
 
 
 // }
-void Move_Robot::floorCallback_(const std_msgs::Int8& msg)
-{
-		std::cout<<"floorCallback_"<<std::endl;
-		int floor_loc = msg.data;
-		switch(floor_loc)
-		{
-				case 1:
-					std::cout<<"floor one arrived"<<std::endl;
-                    floor = floor_loc;
-				break;
-				case 8:
-					std::cout<<"floor eight arrived"<<std::endl;
-                    floor = floor_loc;
-				break;
-
-				case 100:
-					std::cout<<"finish change"<<std::endl;
-                    changemap_finish = true;
-				break;
-
-				default:
-				break;
-		}
-}
 void Move_Robot::TriggerCallback_(const std_msgs::Int8& msg)
 {
 		std::cout<<"move_robot.h delete"<<std::endl;
 		int Trigger = msg.data;
+		std::string LocalparPATH ;
+
 		switch(Trigger)
 		{
 				case ReloadCarParameter:
 							delete this;
-				break;
+							break;
 
 				default:
-				break;
+							break;
 		}
 }
 void Move_Robot::TrafficGOCallback(const move_robot::traffic_recv& command)
@@ -1079,8 +1126,6 @@ void Move_Robot::TrafficGOCallback(const move_robot::traffic_recv& command)
 void Move_Robot::IdTypeCallback(const move_robot::Node_recv& command)
 {
 
-
-
     static int error_cnt = 0;
 
      if(protect_erase)
@@ -1103,9 +1148,29 @@ void Move_Robot::IdTypeCallback(const move_robot::Node_recv& command)
     node_buf.node_pose.z()=command.z;
     node_buf.line=command.line;
     node_buf.radius=command.radius;
-    node_buf.map=command.map;
+		node_buf.map=command.map;
     node_buf.floor=command.floor;
 
+		if(node_buf.type == 15 || node_buf.type == 16 || node_buf.type == 17 || node_buf.type == 18)
+		{
+				int count=0;
+				std::string cut_par;
+				//std::cout<<" buf = "<<command.turn_info<<std::endl;
+				std::stringstream cut(command.turn_info);
+				while(getline(cut,cut_par,'-'))
+				{
+						if(count == 0)node_buf.use_backtra = std::atoi(cut_par.c_str());
+						else if(count == 1)node_buf.turn_time = std::atof(cut_par.c_str());
+						else if(count == 2)node_buf.turn_R = std::atof(cut_par.c_str());
+						count++;
+				}
+		}
+		else
+		{
+				node_buf.use_backtra = false;
+				node_buf.turn_time = 0.0;
+				node_buf.turn_R = 0.0;
+		}
     //  std::cout<<"node_buf.id "<<node_buf.id<<std::endl;
     //             std::cout<<"node_buf.node_pose.x() "<<node_buf.node_pose.x()<<std::endl;
     //              std::cout<<"node_buf.node_pose.y() "<<node_buf.node_pose.y()<<std::endl;
@@ -1133,7 +1198,6 @@ void Move_Robot::IdTypeCallback(const move_robot::Node_recv& command)
     if(Traffic_Node.size()==value)
     {
         bool protect_send = false;
-
         if(A_misson.size() > 0)
         {
             //保護送到原地
@@ -1159,9 +1223,10 @@ void Move_Robot::IdTypeCallback(const move_robot::Node_recv& command)
             }
             else
             {
-                std_msgs::Int8 msg;
-			    msg.data = 10;
-			    Error_Publisher_.publish(msg);
+                // std_msgs::Int8 msg;
+			    			// msg.data = 10;
+			    			// Error_Publisher_.publish(msg);
+								std::cout<<"line split have some problem"<<std::endl;
                 mission_dont_push = false;
             }
 
@@ -1169,6 +1234,17 @@ void Move_Robot::IdTypeCallback(const move_robot::Node_recv& command)
 
             if(A_misson.size() == 1)
                 p_state_ = P_STATE_MOVE;
+
+        }
+        else{
+            error_cnt ++;
+            std_msgs::Int8 msg;
+			msg.data = 8;
+			if(error_cnt == 10)
+            {
+                Error_Publisher_.publish(msg);
+                error_cnt = 0;
+            }
 
         }
 
@@ -1189,103 +1265,139 @@ void Move_Robot::Misson_Path(SUB_MISSONPATH &sub_missonPath_buf)
     id_Point_radius.push_back(Traffic_Node[0].radius);
 
 
+
     for(int i=0;i<Traffic_Node.size();i++)
     {
-    	sub_missonPath_buf.ALL_pathnode.push_back(Traffic_Node[i]);
-
-    }
+    		sub_missonPath_buf.ALL_pathnode.push_back(Traffic_Node[i]);
+		}
 
     int start = Traffic_Node[0].id;
-	int start_type = Traffic_Node[0].type;
+		int start_type = Traffic_Node[0].type;
 
-    std::string MAP = Traffic_Node[0].map;
+		std::string MAP = Traffic_Node[0].map;
 
     for(int i=1;i<Traffic_Node.size();i++)
     {
+				if(MAP == Traffic_Node[i].map)
+				{
+					  //////////////////////////////////如果omni的passing node大於60度就改變type為change mode
+						if(Traffic_Node[i].type == 1 && Traffic_Node[i].kin == "omni" && Traffic_Node[i-1].kin == "omni" && i<Traffic_Node.size()-1)
+						{
+							  float err_sinth = 0;
+								Eigen::Vector3f vec1 = Traffic_Node[i+1].node_pose - Traffic_Node[i].node_pose;
+								Eigen::Vector3f vec2 = Traffic_Node[i-1].node_pose - Traffic_Node[i].node_pose;
+								vec1.z() = 0.0;
+								vec2.z() = 0.0;
+								Eigen::Vector3f vec_cross = vec1.cross(vec2);
+								float vec1_dis = sqrt(pow(vec1.x(),2) + pow(vec1.y(),2) + pow(vec1.z(),2));
+								float vec2_dis = sqrt(pow(vec2.x(),2) + pow(vec2.y(),2) + pow(vec2.z(),2));
+								float vec_cross_dis = sqrt(pow(vec_cross.x(),2) + pow(vec_cross.y(),2) + pow(vec_cross.z(),2));
+								//用外積公式找sinth
+								err_sinth = vec_cross_dis /(vec1_dis * vec2_dis);
+								std::cout<<"err_sinth  "<<err_sinth<<std::endl;
+								//如果夾角th 超過60度 小於120度 即視為轉角
+								if(fabs(err_sinth) > 0.866)
+								{
+										Traffic_Node[i].type = 7;
+										std::cout<<"change passing node to change mode node"<<std::endl;
+								}
+						}
+						//////////////////////////////////
+		        if(Traffic_Node[i].type!=1 ) //type 1 =P
+		        {
+								SUB_MISSONPATH_SUBPOINT sub_missonPath_subPoint_buf;
 
-        if(MAP == Traffic_Node[i].map)
-        {
-            if(Traffic_Node[i].type!=1 ) //type 1 =P
-            {
-                SUB_MISSONPATH_SUBPOINT sub_missonPath_subPoint_buf;
-
-                int end=Traffic_Node[i].id;
-                sub_missonPath_subPoint_buf.start=start;
-                sub_missonPath_subPoint_buf.start_type=start_type;
-                sub_missonPath_subPoint_buf.end=end;
-                sub_missonPath_subPoint_buf.end_type=Traffic_Node[i].type;
-                sub_missonPath_subPoint_buf.map = MAP;
+								int end=Traffic_Node[i].id;
+								sub_missonPath_subPoint_buf.start=start;
+								sub_missonPath_subPoint_buf.start_type=start_type;
+								sub_missonPath_subPoint_buf.end=end;
+								sub_missonPath_subPoint_buf.end_type=Traffic_Node[i].type;
+								sub_missonPath_subPoint_buf.map = MAP;
 
 
 								std::cout<<"Traffic_Node[i].type "<<Traffic_Node[i].type<<std::endl;
-                if(Traffic_Node[i].type == MISSON_Elevator_Inside)
-                {
-                    sub_missonPath_subPoint_buf.floor = Traffic_Node[i].floor;
-										//std::cout<<"floor "<<sub_missonPath_subPoint_buf.floor<<std::endl;
-                }
+								if(Traffic_Node[i].type == MISSON_Elevator_Inside)
+								{
+										sub_missonPath_subPoint_buf.floor = Traffic_Node[i].floor;
+								}
 								std::cout<<"floor "<<sub_missonPath_subPoint_buf.floor<<std::endl;
 
-                id_Point_inPath.push_back(Traffic_Node[i].node_pose);
-                id_Point_lineMode.push_back(Traffic_Node[i].line);
-                id_Point_radius.push_back(Traffic_Node[i].radius);
+								id_Point_inPath.push_back(Traffic_Node[i].node_pose);
+								id_Point_lineMode.push_back(Traffic_Node[i].line);
+								id_Point_radius.push_back(Traffic_Node[i].radius);
+
+								//type12保護 type12的前一點也要是12
+								if(sub_missonPath_buf.sub_missonPath.size()>0)
+								{
+										if(sub_missonPath_buf.sub_missonPath[sub_missonPath_buf.sub_missonPath.size()-1].end_type == 12)
+										{
+												if(sub_missonPath_subPoint_buf.start_type != 12)
+												{
+														std_msgs::Int8 msg;
+														msg.data = 15;
+														Error_Publisher_.publish(msg);
+														mission_dont_push = true;
+														std::cout<<"type 12 protect!!"<<std::endl;
+												}
+										}
+							 }
+							/////////////////////////////////////
+
+								CreatPath(id_Point_inPath,id_Point_lineMode,id_Point_radius,sub_missonPath_subPoint_buf);
+
+								sub_missonPath_buf.sub_missonPath.push_back(sub_missonPath_subPoint_buf);
+
+								std::cout<<"start "<<sub_missonPath_subPoint_buf.start<<std::endl;
+								std::cout<<"end "<<sub_missonPath_subPoint_buf.end<<std::endl;
 
 
-                CreatPath(id_Point_inPath,id_Point_lineMode,id_Point_radius,sub_missonPath_subPoint_buf);
 
-                sub_missonPath_buf.sub_missonPath.push_back(sub_missonPath_subPoint_buf);
+								start=end;
+								start_type=Traffic_Node[i].type;
+								id_Point_inPath.clear();
+								id_Point_inPath.push_back(Traffic_Node[i].node_pose);
 
-                std::cout<<"start "<<sub_missonPath_subPoint_buf.start<<std::endl;
-                std::cout<<"end "<<sub_missonPath_subPoint_buf.end<<std::endl;
+								id_Point_lineMode.clear();
+								id_Point_lineMode.push_back(Traffic_Node[i].line);
 
+								id_Point_radius.clear();
+								id_Point_radius.push_back(Traffic_Node[i].radius);
 
+		        }
+		        else //如果=P //(沒有了)遇到passing點 再前後新增NODE點來產生貝茲 避免交管點到下個轉彎彎不過去
+		        {
 
-                start=end;
-                start_type=Traffic_Node[i].type;
-                id_Point_inPath.clear();
-                id_Point_inPath.push_back(Traffic_Node[i].node_pose);
+		            id_Point_inPath.push_back(Traffic_Node[i].node_pose);
+		            id_Point_lineMode.push_back(Traffic_Node[i].line);
+		            id_Point_radius.push_back(Traffic_Node[i].radius);
 
-                id_Point_lineMode.clear();
-                id_Point_lineMode.push_back(Traffic_Node[i].line);
+		        }
+				}
+				else
+				{
+						if(id_Point_inPath.size() > 1)
+						{
+								std::cout<<"error line mode(map)"<<std::endl;
+								std_msgs::Int8 msg;
+			    			msg.data = 13;
+			    			Error_Publisher_.publish(msg);
+								mission_dont_push = true;
+								break;
+						}
 
-                id_Point_radius.clear();
-                id_Point_radius.push_back(Traffic_Node[i].radius);
+						MAP = Traffic_Node[i].map;
+						id_Point_inPath.clear();
+						id_Point_inPath.push_back(Traffic_Node[i].node_pose);
 
-            }
-            else //如果=P //(沒有了)遇到passing點 再前後新增NODE點來產生貝茲 避免交管點到下個轉彎彎不過去
-            {
+						id_Point_lineMode.clear();
+						id_Point_lineMode.push_back(Traffic_Node[i].line);
 
-                id_Point_inPath.push_back(Traffic_Node[i].node_pose);
-                id_Point_lineMode.push_back(Traffic_Node[i].line);
-                id_Point_radius.push_back(Traffic_Node[i].radius);
+						id_Point_radius.clear();
+						id_Point_radius.push_back(Traffic_Node[i].radius);
 
-            }
-
-        }
-        else
-        {
-
-            if(id_Point_inPath.size() > 1)
-            {
-                std::cout<<"error line mode"<<std::endl;
-                mission_dont_push = true;
-                break;
-            }
-
-            MAP = Traffic_Node[i].map;
-            id_Point_inPath.clear();
-            id_Point_inPath.push_back(Traffic_Node[i].node_pose);
-
-            id_Point_lineMode.clear();
-            id_Point_lineMode.push_back(Traffic_Node[i].line);
-
-            id_Point_radius.clear();
-            id_Point_radius.push_back(Traffic_Node[i].radius);
-
-            start = Traffic_Node[i].id;
-	        start_type = Traffic_Node[i].type;
-
-        }
-
+						start = Traffic_Node[i].id;
+						start_type = Traffic_Node[i].type;
+				}
 
     }
     id_Point_inPath.clear();
@@ -1373,6 +1485,16 @@ void Move_Robot::CreatPath(std::vector<Eigen::Vector3f> input_buf,std::vector<in
 
             p1 = sub_path[0];
             p2 = sub_path[1];
+
+						//保護兩點不要一樣不然distance會有問題
+						if(p1.x() == p2.x() &&  p1.y() == p2.y())
+						{
+								std_msgs::Int8 msg;
+								msg.data = 14;
+								Error_Publisher_.publish(msg);
+								mission_dont_push = true;
+								std::cout<<"two same node error!!"<<std::endl;
+						}
             // //check_number = 1;
             dis = getDistance(p1.x(), p1.y(), p2.x(), p2.y());
             t_step = dis/sample_dis;
@@ -1404,6 +1526,9 @@ void Move_Robot::CreatPath(std::vector<Eigen::Vector3f> input_buf,std::vector<in
                 std::cout<<"return_buf.start()="<<return_buf.start<<std::endl;
                 std::cout<<"return_buf.end()="<<return_buf.end<<std::endl;
                 return_buf.sub_missonPath_subPoint.clear();
+								std_msgs::Int8 msg;
+			    			msg.data = 10;
+			    			Error_Publisher_.publish(msg);
                 mission_dont_push = true;
                 //error_break = true;
                 break;
@@ -1445,9 +1570,15 @@ void Move_Robot::CreatPath(std::vector<Eigen::Vector3f> input_buf,std::vector<in
 
             p1_ << p2.x()-Cornervector.x() ,p2.y()-Cornervector.y() ,p1.z();
 
-
-
-
+						//判斷R角有沒有過大
+						if(Arcradius > getDistance(p1.x(),p1.y(),p2.x(),p2.y()) || Arcradius > getDistance(p3.x(),p3.y(),p2.x(),p2.y()))
+						{
+								std_msgs::Int8 msg;
+								msg.data = 12;
+								Error_Publisher_.publish(msg);
+								mission_dont_push = true;
+								std::cout<<"Arcradius too large!!"<<std::endl;
+						}
 
 
             //畫第二個虛擬點
@@ -1664,12 +1795,9 @@ void Move_Robot::Misson_state(bool isReSet)
 {
 
 	static bool send_changemap = false;
-	static bool send_speak = false;
 	static int cnt_traffic = 0;
 	static int cnt_virtual_traffic = 0;
-
-	int cnt_traffic_limit;
-	int cnt_virtual_traffic_limit;
+	std::vector<unsigned char> command;
 	if(!isReSet)
 	{
 
@@ -1702,15 +1830,15 @@ void Move_Robot::Misson_state(bool isReSet)
             if(trafficGO_recv.id==id)
                 if(trafficGO_recv.GO ==1)
                 {
-					ChangToTraffic_finishstop = false;
+										ChangToTraffic_finishstop = false;
                     p_state_ = P_STATE_MOVE;
                     trafficGO_recv.GO = 0 ;
-                   memset(&trafficGO_recv,0,sizeof(trafficGO_recv));
-                   std::cout<<"===State_Machine MISSON_traffic==="<<std::endl;
+                   	memset(&trafficGO_recv,0,sizeof(trafficGO_recv));
+                   	std::cout<<"===State_Machine MISSON_traffic==="<<std::endl;
                 }
 
             //重派 時間到發送
-
+            int cnt_traffic_limit;
 
             cnt_traffic_limit = reMission_time/time_sample ;
             if(cnt_traffic < cnt_traffic_limit)
@@ -1873,7 +2001,7 @@ void Move_Robot::Misson_state(bool isReSet)
                 }
 
             //重派 時間到發送
-
+            int cnt_virtual_traffic_limit;
 
             cnt_virtual_traffic_limit = reMission_time/time_sample ;
             if(cnt_virtual_traffic < cnt_virtual_traffic_limit)
@@ -1897,7 +2025,7 @@ void Move_Robot::Misson_state(bool isReSet)
                 A_misson.clear();
                 p_state_=P_STATE_IDLE;
                 isALLfinish =false;
-				ChangToTraffic_finishstop = false;
+								ChangToTraffic_finishstop = false;
                 ROS_INFO("All Success!!!\n");
 
             }
@@ -1910,25 +2038,26 @@ void Move_Robot::Misson_state(bool isReSet)
             Command_STATE = Command_Elevator_Entrance;
 
 						//Change_Map_name = A_misson[now_A_misson].sub_missonPath[now_path_index + 2].map;
-						std::cout<<"send_speak "<<Command_STATE <<std::endl;
-						if(!send_speak)
-						{
-								std::cout<<"SPEAK send" <<std::endl;
-
-								std_msgs::String speak_msg;
-								speak_msg.data = "0";
-								Speak_Publisher_.publish(speak_msg);
-								send_speak = true;
-
-						}
-
+						// if(!send_changemap)
+						// {
+						// 	std::cout<<"send_Load Change Map early" <<std::endl;
+						// 		std::string command_str ="Load Change Map early";
+						// 		move_robot::setmap_ctr msg;
+						// 		msg.type = command_str;
+						// 		msg.Name = Change_Map_name;
+						//
+						// 		Command_Publisher_.publish(msg);
+						//
+						// 		send_changemap = true;
+						//
+						// }
+            obs_way_theta = 0.0;//如果最後進站是omni模式必須把閉障方向改為頭不然偵測會有問題
             //停在電梯前等待開門
             if(ElevatorGO)
             {
                 p_state_ = P_STATE_MOVE;
                 std::cout<<"===State_Machine MISSON_Elevator_Entrance==="<<ElevatorGO<<std::endl;
 								//send_changemap = false;
-								send_speak = false;
             }
 
         break;
@@ -1956,36 +2085,40 @@ void Move_Robot::Misson_state(bool isReSet)
                 send_changemap = true;
 
             }
+				    sendreceive.Package_testWheel_encoder(0, 0, 0, 0, command);
+						SendPackage(command);
+						// if(!changemap_finish)
+						// 	std::cout<<"********************"<<std::endl;
 
-						if(!send_speak)
-					 {
-							 std::cout<<"SPEAK send" <<std::endl;
+						//if(changemap_finish)
+                        //{
+                            std::cout<<"============================changemap_finish================="<<std::endl;
+                            std::cout<<"floor1     "<<A_misson[now_A_misson].sub_missonPath[now_path_index].floor<<std::endl;
+                            std::cout<<"floor1     "<<floor<<std::endl;
+                            if(A_misson[now_A_misson].sub_missonPath[now_path_index].floor == floor)
+                            {
+                                std::cout<<"==========================test1===================="<<std::endl;
+                                std::cout<<"==========================ElevatorGO===================="<<ElevatorGO<<std::endl;
+                                //if(ElevatorGO)
+                                //{
+																	  /////////////刪除第一個type12前的點資訊（id相同衝突）////////////
+																		for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++)
+																		{
+																				if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+																				{
+																						A_misson[now_A_misson].ALL_pathnode.erase(A_misson[now_A_misson].ALL_pathnode.begin() ,A_misson[now_A_misson].ALL_pathnode.begin()+i+1);//必須刪除自己id
+																						break;
+																				}
+																		}
+																		///////////////////////////////////////////////////////////
+                                    p_state_ = P_STATE_MOVE;
+                                    std::cout<<"===State_Machine MISSON_Elevator_Inside=== GO"<<ElevatorGO<<std::endl;
+                                    send_changemap = false;
+																		floor = -1;
+                                //}
 
-							 std::string say_floor = std::to_string(A_misson[now_A_misson].sub_missonPath[now_path_index].floor);
-							 std::cout<<"say_floor"<< say_floor <<std::endl;
-
-							 std_msgs::String speak_msg;
-							 speak_msg.data = say_floor;
-							 Speak_Publisher_.publish(speak_msg);
-							 send_speak = true;
-
-					 }
-
-			if(!changemap_finish)
-				std::cout<<"********************"<<std::endl;
-
-			if(changemap_finish)
-			if(A_misson[now_A_misson].sub_missonPath[now_path_index].floor == floor)
-			{
-                if(ElevatorGO)
-                {
-                    p_state_ = P_STATE_MOVE;
-                    std::cout<<"===State_Machine MISSON_Elevator_Inside=== GO"<<ElevatorGO<<std::endl;
-										send_changemap = false;
-										send_speak = false;
-                }
-
-			}
+                            }
+                        //}
 
         break;
 
@@ -1999,26 +2132,28 @@ void Move_Robot::Misson_state(bool isReSet)
 
 						if(!send_changemap)
             {
-						std::cout<<"send_changemap" <<std::endl;
-            std::string command_str ="Load Change Map";
-            move_robot::setmap_ctr msg;
-            msg.type = command_str;
-            msg.Name = Change_Map_name;
-            msg.ini_pose_x = ini_pose.x();
-            msg.ini_pose_y = ini_pose.y();
-            msg.ini_pose_z = ini_pose.z();
-            Command_Publisher_.publish(msg);
+								std::cout<<"send_changemap" <<std::endl;
+		            std::string command_str ="Load Change Map";
+		            move_robot::setmap_ctr msg;
+		            msg.type = command_str;
+		            msg.Name = Change_Map_name;
+		            msg.ini_pose_x = ini_pose.x();
+		            msg.ini_pose_y = ini_pose.y();
+		            msg.ini_pose_z = ini_pose.z();
+		            Command_Publisher_.publish(msg);
 
-            send_changemap = true;
-			//std::cout<<"ini_pose  " <<ini_pose<<std::endl;
+		            send_changemap = true;
 
-						std::cout<<"==send_changemap==" <<std::endl;
+								std::cout<<"==send_changemap==" <<std::endl;
 						}
+						sendreceive.Package_testWheel_encoder(0, 0, 0, 0, command);
+						SendPackage(command);
 
 					if(changemap_finish)
 					{
 						p_state_ = P_STATE_MOVE;
 						send_changemap = false;
+						changemap_finish = false;
 					}
 
 
@@ -2027,13 +2162,96 @@ void Move_Robot::Misson_state(bool isReSet)
 
 
         break;
+				case MISSON_qrcode:
+				Command_STATE = Command_STATE_qrcode;
+				std::cout<<"MISSON_qrcode" <<std::endl;
 
 
+
+				for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++){
+						if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+						{
+								float time = A_misson[now_A_misson].ALL_pathnode[i].time ;
+								time_delay_limit = time/time_sample;
+								break;
+						}
+				}
+
+				p_state_ = P_STATE_QRCODE;
+				break;
+
+				case MISSON_turn_left:
+				std::cout<<"MISSON_turn_left" <<std::endl;
+				for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++){
+						if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+						{
+								turn_use_backtra = A_misson[now_A_misson].ALL_pathnode[i].use_backtra ;
+								teensy_turn_time = A_misson[now_A_misson].ALL_pathnode[i].turn_time;
+								teensy_turn_R = A_misson[now_A_misson].ALL_pathnode[i].turn_R;
+								time_delay_limit = 1;
+								break;
+						}
+				}
+				p_state_ = P_STATE_LEFT;
+				break;
+
+				case MISSON_turn_right:
+				std::cout<<"MISSON_turn_right" <<std::endl;
+				for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++){
+						if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+						{
+								turn_use_backtra = A_misson[now_A_misson].ALL_pathnode[i].use_backtra ;
+								teensy_turn_time = A_misson[now_A_misson].ALL_pathnode[i].turn_time;
+								teensy_turn_R = A_misson[now_A_misson].ALL_pathnode[i].turn_R;
+								time_delay_limit = 1;
+								break;
+						}
+				}
+				p_state_ = P_STATE_RIGHT;
+				break;
+
+				case MISSON_turn_back_left:
+				std::cout<<"MISSON_turn_back_left" <<std::endl;
+				for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++){
+						if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+						{
+								turn_use_backtra = A_misson[now_A_misson].ALL_pathnode[i].use_backtra ;
+								teensy_turn_time = A_misson[now_A_misson].ALL_pathnode[i].turn_time;
+								teensy_turn_R = A_misson[now_A_misson].ALL_pathnode[i].turn_R;
+								time_delay_limit = 1;
+								break;
+						}
+				}
+				p_state_ = P_STATE_BACK_LEFT;
+				break;
+
+				case MISSON_turn_back_right:
+				std::cout<<"MISSON_turn_back_right" <<std::endl;
+				for(int i=0;i<A_misson[now_A_misson].ALL_pathnode.size();i++){
+						if(A_misson[now_A_misson].ALL_pathnode[i].id==id)
+						{
+								turn_use_backtra = A_misson[now_A_misson].ALL_pathnode[i].use_backtra ;
+								teensy_turn_time = A_misson[now_A_misson].ALL_pathnode[i].turn_time;
+								teensy_turn_R = A_misson[now_A_misson].ALL_pathnode[i].turn_R;
+								time_delay_limit = 1;
+								break;
+						}
+				}
+				p_state_ = P_STATE_BACK_RIGHT;
+				break;
+
+				case MISSON_back_tracking:
+				std::cout<<"MISSON_back_tracking" <<std::endl;
+				p_state_ = P_STATE_BACK;
+				time_delay_limit = 2;
+				break;
+
+				default:
+				break;
     }
 	}
 	else
 	{
-		send_speak = false;
 		send_changemap = false;
 		cnt_traffic = 0;
 		cnt_virtual_traffic = 0;
@@ -2041,6 +2259,41 @@ void Move_Robot::Misson_state(bool isReSet)
 
 
 
+}
+int Move_Robot::calc_back_target_index(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index)
+{
+	float min_error_value = 10000000;
+	int min_index = -1;
+	//當前路徑所有點與車子計算距離取最小
+	for(int i=0; i<subpath.size(); i++){
+			Eigen::Vector3f sub_goal = subpath[i];
+			float dx = robot_pose.x() - sub_goal.x();
+			float dy = robot_pose.y() - sub_goal.y();
+			float error = sqrt(dx*dx + dy*dy);
+			if(error < min_error_value){
+					min_error_value = error;
+					min_index = i;
+			}
+	}
+
+	int index = min_index;
+	now_index = index;
+
+	float k = target_index_V_ratio;
+	float Lfc = target_index_distance;
+
+	float Lf = 1.0;
+	float L = 0;
+
+	//依速度調整前世距離的點
+	while(Lf > L && (min_index+1) < (subpath.size())){
+			Eigen::Vector3f sub_goal = subpath[min_index + 1];
+			float dx = robot_pose.x() - sub_goal.x();
+			float dy = robot_pose.y() - sub_goal.y();
+			L = sqrt(dx*dx + dy*dy);
+			min_index += 1;
+	}
+	return min_index;
 }
 
 int Move_Robot::calc_target_index(Eigen::Vector3f &robot_pose, float &robot_v, std::vector<Eigen::Vector3f> &subpath, int &now_index)
@@ -2067,7 +2320,6 @@ int Move_Robot::calc_target_index(Eigen::Vector3f &robot_pose, float &robot_v, s
     float Lfc = target_index_distance;
 
     float Lf = k*robot_v + Lfc;
-		//float Lf = 0.4;
     float L = 0;
 
     //依速度調整前世距離的點
@@ -2102,16 +2354,10 @@ int Move_Robot::calc_target_index_obsturn(Eigen::Vector3f &robot_pose, float &ro
     int index = min_index;
     now_index = index;
 
-    // float k = 0.5;
-    // //float Lfc = k*robot_v + 2.0;
-		// float Lfc = 1.1;
-    //float Lf = Lfc;
+    float k = 0.5;
+    float Lfc = k*robot_v + 2.0;
 
-		float k = 1.0;
-    float Lfc = 0.4;
-
-    //float Lf = (k*0.6 + Lfc)*1.5;
-		float Lf = 3.0;
+    float Lf = Lfc;
     float L = 0;
 
     //依速度調整前世距離的點
@@ -2150,8 +2396,7 @@ int Move_Robot::calc_target_index_obs(Eigen::Vector3f &robot_pose, float &robot_
     //=================change=============
     float Lfc = 0.4;
 
-    //float Lf = k*robot_v + Lfc;
-		float Lf = 0.4;
+    float Lf = k*robot_v + Lfc;
     float L = 0;
 
     while(Lf > L && (min_index+1) < (subpath.size())){
@@ -2196,40 +2441,6 @@ int Move_Robot::calc_target_index_key(Eigen::Vector3f &robot_pose, float &dis, s
     }
     return min_index;
 }
-int Move_Robot::calc_target_index_MPC(Eigen::Vector3f &robot_pose,  std::vector<Eigen::Vector3f> &subpath, int &now_index)
-{
-    float min_error_value = 10000000;
-    int min_index = -1;
-
-    for(int i=0; i<subpath.size(); i++){
-        Eigen::Vector3f sub_goal = subpath[i];
-        float dx = robot_pose.x() - sub_goal.x();
-        float dy = robot_pose.y() - sub_goal.y();
-        float error = sqrt(dx*dx + dy*dy);
-        if(error < min_error_value){
-            min_error_value = error;
-            min_index = i;
-        }
-    }
-
-    int index = min_index;
-    now_index = index;
-
-
-    //float Lf = 2 + CarLength_helf;
-		float Lf = 0.83;
-    float L = 0;
-
-    while(Lf > L && (min_index+1) < (subpath.size())){
-        Eigen::Vector3f sub_goal = subpath[min_index + 1];
-        float dx = robot_pose.x() - sub_goal.x();
-        float dy = robot_pose.y() - sub_goal.y();
-        L = sqrt(dx*dx + dy*dy);
-        min_index += 1;
-    }
-    return min_index;
-}
-
 
 void Move_Robot::MissMsgCallback(const std_msgs::Int16& msg)
 {
@@ -2238,29 +2449,11 @@ void Move_Robot::MissMsgCallback(const std_msgs::Int16& msg)
     //ROS_INFO("  isMissing   ");
 
     if(isMissing && !isReveice_joystick){
-        //Stop();
-        p_state_ = P_STATE_STOP;
         ROS_INFO("  isMissing   ");
         v_stop = true;
     }
     else
     {
-        if(v_stop)
-	        if(A_misson.size() > 0)
-            {
-		        if(time_delay_counter > 0)
-			        {
-				        p_state_ = P_STATE_TIME_DELAY;
-				        std::cout<<"GO_Loading"<<std::endl;
-			        }
-		        else
-			    {
-				    p_state_ = P_STATE_MOVE;
-				    std::cout<<"GO_move"<<std::endl;
-			    }
-            }
-	        else
-		        p_state_ = P_STATE_IDLE;
         v_stop = false;
     }
 
@@ -2271,8 +2464,31 @@ void Move_Robot::slamoutCallback(const geometry_msgs::PoseStamped& msg)
 {
     tf::Pose pose_tf;
     tf::poseMsgToTF(msg.pose, pose_tf);
-    slam_pose_ = Eigen::Vector3f(msg.pose.position.x, msg.pose.position.y, tf::getYaw(pose_tf.getRotation()));
     //ROS_INFO("Robot pose x: %f y: %f yaw: %f", slam_pose_[0], slam_pose_[1], slam_pose_[2]);
+		if(!back_trajectory)
+		{
+				slam_pose_ = Eigen::Vector3f(msg.pose.position.x, msg.pose.position.y, tf::getYaw(pose_tf.getRotation()));
+		}
+		else
+		{
+				float back_theta = 0.0;
+				if(tf::getYaw(pose_tf.getRotation()) > 0)
+				{
+						back_theta = -1 * (M_PI - tf::getYaw(pose_tf.getRotation()));
+				}
+				else
+				{
+						back_theta = M_PI + tf::getYaw(pose_tf.getRotation());
+				}
+				// if(back_theta>M_PI)
+				// 	back_theta=back_theta-2*M_PI;
+				// else if(back_theta<-M_PI)
+				// 	back_theta=back_theta+2*M_PI;
+
+				slam_pose_ = Eigen::Vector3f(msg.pose.position.x, msg.pose.position.y, back_theta);
+				// std::cout<<"origin_theta ==== "<<tf::getYaw(pose_tf.getRotation())<<std::endl;
+				// std::cout<<"back_theta ==== "<<back_theta<<std::endl;
+		}
 
     move_robot::state msg1;
     msg1.id = Command_id;
@@ -2296,7 +2512,7 @@ void Move_Robot::SendPackage(std::vector<unsigned char> recv)
     for(int i = 0;i<recv.size(); i++)
 	{
             command[i] = recv[i];
-//            printf("%hhx \n",command[i]);
+            //printf("%hhx \n",command[i]);
 	}
 
     int nByte = 0;
@@ -2387,8 +2603,8 @@ void Move_Robot::draw(int id,float color_r,float color_g,float color_b,std::vect
             points.type = visualization_msgs::Marker::POINTS;
 
             // POINTS markers use x and y scale for width/height respectively
-            points.scale.x = 0.05;
-            points.scale.y = 0.05;
+            points.scale.x = 0.2;
+            points.scale.y = 0.2;
 
             // Points are green
             points.color.g = color_g;
@@ -2493,78 +2709,52 @@ int Move_Robot::SetLocalpar(std::string file_buf)
             Car_packMode = 1;
         else if(s_Car_packMode =="Boling_smallgray")
             Car_packMode = 2;
-				else if(s_Car_packMode =="public_wheel")
+				else if(s_Car_packMode =="Boling_onewheel")
 		        Car_packMode = 0;
+				else if(s_Car_packMode =="test_wheel")
+				    Car_packMode = 0;
 
 				std::string ChangeMode_dis_error_temp;
 				std::getline(fin, ChangeMode_dis_error_temp);
-		    std::getline(fin, ChangeMode_dis_error_temp);
+        std::getline(fin, ChangeMode_dis_error_temp);
 				ChangeMode_dis_error = std::atof(ChangeMode_dis_error_temp.c_str());
 
 				std::string ChangeMode_angular_error_temp;
 				std::getline(fin, ChangeMode_angular_error_temp);
-		    std::getline(fin, ChangeMode_angular_error_temp);
+        std::getline(fin, ChangeMode_angular_error_temp);
 				ChangeMode_angular_error = std::atof(ChangeMode_angular_error_temp.c_str());
 
 				std::string traffic_dis_error_temp;
 				std::getline(fin, traffic_dis_error_temp);
-		    std::getline(fin, traffic_dis_error_temp);
-			  traffic_dis_error = std::atof(traffic_dis_error_temp.c_str());
+        std::getline(fin, traffic_dis_error_temp);
+				traffic_dis_error = std::atof(traffic_dis_error_temp.c_str());
 
 				std::string othermode_dis_error_temp;
 				std::getline(fin, othermode_dis_error_temp);
-		    std::getline(fin, othermode_dis_error_temp);
+        std::getline(fin, othermode_dis_error_temp);
 				othermode_dis_error = std::atof(othermode_dis_error_temp.c_str());
 
 				std::string othermode_angular_error_temp;
 				std::getline(fin, othermode_angular_error_temp);
-		    std::getline(fin, othermode_angular_error_temp);
+        std::getline(fin, othermode_angular_error_temp);
 				othermode_angular_error = std::atof(othermode_angular_error_temp.c_str());
 
 				std::string target_index_V_ratio_temp;
 				std::getline(fin, target_index_V_ratio_temp);
-		    std::getline(fin, target_index_V_ratio_temp);
+        std::getline(fin, target_index_V_ratio_temp);
 				target_index_V_ratio = std::atof(target_index_V_ratio_temp.c_str());
 
 				std::string target_index_distance_temp;
 				std::getline(fin, target_index_distance_temp);
-		    std::getline(fin, target_index_distance_temp);
+        std::getline(fin, target_index_distance_temp);
 				target_index_distance = std::atof(target_index_distance_temp.c_str());
 
 				std::string network_card_temp;
 				std::getline(fin, network_card_temp);
-		    std::getline(fin, network_card_temp);
+        std::getline(fin, network_card_temp);
 				network_card = network_card_temp;
     }
 
     fin.close();
-
     return Car_packMode;
-}
-double Move_Robot::polyeval(Eigen::VectorXd coeffs, double x) {
-  double result = 0.0;
-  for (int i = 0; i < coeffs.size(); i++) {
-    result += coeffs[i] * pow(x, i);
-  }
-  return result;
-}
-
-Eigen::VectorXd Move_Robot::polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
-
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
 }

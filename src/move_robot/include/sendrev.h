@@ -9,12 +9,10 @@
 #include <move_robot/Battery.h>
 
 #define ChinaMotor 0
+#define Boling_onewheel 0
+#define test_wheel 0
+#define IVAM_Car_vw 0
 
-
-#define IVAM_Car_vlvr 0
-#define IVAM_Car_vw 1
-#define Boling_smallgray 2
-#define public_wheel 0
 
 
 class sendrev
@@ -24,32 +22,27 @@ public:
     void Setmode(int input);
 
     void Package_AllDir_encoder(int FL, int FLA,int BL,int BLA,int FR ,int FRA,int BR,int BRA,std::vector<unsigned char> &return_cmd);
-    void Package_Diff_encoder(double cmd_vl, double cmd_vr,std::vector<unsigned char> &return_cmd);
-    void Package_publicWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd);//測試公板
-
-
-
-
-
-	void Package_Boling_smallgray(double &cmd_vl, double &cmd_vr,std::vector<unsigned char> &return_cmd);
-	void Package_Boling_yellow(double v, double th,unsigned char &return_cmd,int &nByte);
-  void Package_allWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd);//測試公版
-
     void RevProcess_AllDir_encoder(std::vector<unsigned char> &rev_buf,float &Rev_FR_rpm,float &Rev_FL_rpm,float &Rev_RR_rpm,float &Rev_RL_rpm,float &Rev_FR_deg,float &Rev_FL_deg,float &Rev_RR_deg,float &Rev_RL_deg);
+    void Package_OneWheel_encoder(double cmd_v, double cmd_w,std::vector<unsigned char> &return_cmd);
+    void RevProcess_OneWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th);
+    void Package_testWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd);//測試公版
+    void RevProcess_testWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type);
+    void Package_Diff_encoder(double cmd_vl, double cmd_vr,std::vector<unsigned char> &return_cmd);
     void RevProcess_two_wheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W);
-    void RevProcess_publicWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type);//測試公版
-    void RevProcess_allWheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W);//測試公版
 
 private:
+    void Package_Boling_onewheel(double cmd_v, double cmd_w,std::vector<unsigned char> &return_cmd);
+    void Package_allWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd);//測試公版
     void Package_ChinaMotor(int &FL, int &FLA,int &BL,int &BLA,int &FR ,int &FRA,int &BR,int &BRA,std::vector<unsigned char> &return_cmd );
-    void Package_IVAM_Car_vlvr(double &cmd_vl, double &cmd_vr,std::vector<unsigned char> &return_cmd);
     void Package_IVAM_Car_vw(double &cmd_vl, double &cmd_vr,std::vector<unsigned char> &return_cmd);
-
     void RevProcess_ChinaMotor(std::vector<unsigned char> &rev_buf,float &Rev_FR_rpm,float &Rev_FL_rpm,float &Rev_RR_rpm,float &Rev_RL_rpm,float &Rev_FR_deg,float &Rev_FL_deg,float &Rev_RR_deg,float &Rev_RL_deg);
+    void RevProcess_Boling_onewheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th);
+    void RevProcess_allWheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type);
     void RevProcess_IVAM_Car_vw(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W);
-
 private:
     int mode;
+    float last_Rev_V;//濾波用
+    float last_Rev_W;//濾波用
     ros::NodeHandle nodeHandle_;
     ros::Publisher Battery_Publisher_;
 
@@ -57,6 +50,8 @@ private:
 sendrev::sendrev()
 {
         mode = -1 ;
+        last_Rev_V = 0.0;
+        last_Rev_W = 0.0;
         Battery_Publisher_ = nodeHandle_.advertise<move_robot::Battery>("Battery",10);
 }
 void sendrev::Setmode(int input)
@@ -76,37 +71,196 @@ void sendrev::Package_AllDir_encoder(int FL, int FLA,int BL,int BLA,int FR ,int 
 
 }
 
-void sendrev::Package_publicWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd)//測試公版
+void sendrev::Package_OneWheel_encoder(double cmd_v, double cmd_w,std::vector<unsigned char> &return_cmd)
 {
     switch(mode){
-            case public_wheel:
+            case Boling_onewheel:
+                 Package_Boling_onewheel(cmd_v, cmd_w, return_cmd);
+            break;
+            default:
+            break;
+    }
+}
+
+void sendrev::Package_Diff_encoder(double cmd_vl, double cmd_vr,std::vector<unsigned char> &return_cmd)
+{
+    switch(mode){
+	        case IVAM_Car_vw:
+                 Package_IVAM_Car_vw(cmd_vl, cmd_vr, return_cmd);
+            break;
+            default:
+            break;
+    }
+}
+
+
+void sendrev::Package_testWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd)//測試公版
+{
+    switch(mode){
+            case test_wheel:
                  Package_allWheel_encoder(cmd_vx, cmd_vy, cmd_w, type, return_cmd);
             break;
             default:
             break;
     }
 }
-void sendrev::Package_Diff_encoder(double cmd_vl, double cmd_vr,std::vector<unsigned char> &return_cmd)
+
+void sendrev::RevProcess_two_wheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W)
 {
-    switch(mode){
-            case IVAM_Car_vlvr:
-                 Package_IVAM_Car_vlvr(cmd_vl, cmd_vr, return_cmd);
+    switch(mode)
+    {
+        case IVAM_Car_vw:
+            RevProcess_IVAM_Car_vw(rev_buf, Rev_V, Rev_W);
             break;
-
-	        case IVAM_Car_vw:
-                 Package_IVAM_Car_vw(cmd_vl, cmd_vr, return_cmd);
-            break;
-
-            case Boling_smallgray:
-                 Package_Boling_smallgray(cmd_vl, cmd_vr, return_cmd);
-            break;
-
-            default:
+        default:
             break;
     }
 }
 
+void sendrev::Package_Boling_onewheel(double cmd_v, double cmd_w,std::vector<unsigned char> &return_cmd)
+{
+    std::cout<<"cmd_v: "<<cmd_v<<std::endl;
+    std::cout<<"cmd_w: "<<cmd_w<<std::endl;
+    double send_v = cmd_v + 20.0;
+    double send_w = cmd_w + 20.0;
 
+    std::vector<unsigned char> command;
+
+    int integer_v = (int(send_v));
+    int float_v = ( int((send_v - double(integer_v))*1000 ));
+    int integer_w = (int(send_w));
+    int float_w = ( int((send_w - double(integer_w))*1000 ));
+
+    int HighByte_integer_v = integer_v/256;
+    int LowByte_integer_v  = integer_v%256;
+    int HighByte_float_v   = float_v/256;
+    int LowByte_float_v    = float_v%256;
+
+    int HighByte_integer_w = integer_w/256;
+    int LowByte_integer_w  = integer_w%256;
+    int HighByte_float_w   = float_w/256;
+    int LowByte_float_w    = float_w%256;
+
+    command.push_back('S');
+    command.push_back('T');
+    command.push_back(HighByte_integer_v);
+    command.push_back(LowByte_integer_v);
+    command.push_back(HighByte_float_v);
+    command.push_back(LowByte_float_v);
+    command.push_back(HighByte_integer_w);
+    command.push_back(LowByte_integer_w);
+    command.push_back(HighByte_float_w);
+    command.push_back(LowByte_float_w);
+    command.push_back('E');
+    command.push_back('N');
+    command.push_back('D');
+
+    return_cmd = command;
+}
+
+void sendrev::Package_allWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd)//測試公版沒有vy就是0
+{
+    //std::cout<<"cmd_vx: "<<cmd_vx<<std::endl;
+    std::cout<<"cmd_vx: "<<cmd_vx<<" cmd_vy: "<<cmd_vy<<" cmd_theta: "<<atan2((cmd_w*1.02),cmd_vx) *180.0 / M_PI <<" cmd_w: "<<cmd_w<<" type: "<<type<<std::endl;
+
+    double send_vx = cmd_vx + 100.0;
+    double send_vy = cmd_vy + 100.0;
+    double send_w = cmd_w + 100.0;
+    static unsigned char count = 0;
+
+    std::vector<unsigned char> command;
+
+    int integer_vx = (int(send_vx));
+    int float_vx = ( int((send_vx - double(integer_vx))*1000 ));
+    int integer_vy = (int(send_vy));
+    int float_vy = ( int((send_vy - double(integer_vy))*1000 ));
+    int integer_w = (int(send_w));
+    int float_w = ( int((send_w - double(integer_w))*1000 ));
+
+    int HighByte_integer_vx = integer_vx/256;
+    int LowByte_integer_vx  = integer_vx%256;
+    int HighByte_float_vx   = float_vx/256;
+    int LowByte_float_vx    = float_vx%256;
+
+    int HighByte_integer_vy = integer_vy/256;
+    int LowByte_integer_vy  = integer_vy%256;
+    int HighByte_float_vy   = float_vy/256;
+    int LowByte_float_vy    = float_vy%256;
+
+    int HighByte_integer_w = integer_w/256;
+    int LowByte_integer_w  = integer_w%256;
+    int HighByte_float_w   = float_w/256;
+    int LowByte_float_w    = float_w%256;
+
+    int checksum = HighByte_integer_vx + LowByte_integer_vx + HighByte_float_vx + LowByte_float_vx + HighByte_integer_vy + LowByte_integer_vy + HighByte_float_vy + LowByte_float_vy + HighByte_integer_w + LowByte_integer_w + HighByte_float_w + LowByte_float_w;
+
+    if(type == 1)
+    {
+        HighByte_float_vx = 0;
+        LowByte_float_vx = 0;
+        HighByte_float_vy = 0;
+        LowByte_float_vy = 0;
+        HighByte_float_w = 0;
+        LowByte_float_w = 0;
+    }
+    command.push_back('S');
+    command.push_back('T');
+    command.push_back(HighByte_integer_vx);
+    command.push_back(LowByte_integer_vx);
+    command.push_back(HighByte_float_vx);
+    command.push_back(LowByte_float_vx);
+    command.push_back(HighByte_integer_vy);
+    command.push_back(LowByte_integer_vy);
+    command.push_back(HighByte_float_vy);
+    command.push_back(LowByte_float_vy);
+    command.push_back(HighByte_integer_w);
+    command.push_back(LowByte_integer_w);
+    command.push_back(HighByte_float_w);
+    command.push_back(LowByte_float_w);
+    command.push_back(checksum);
+    command.push_back(count);//判斷有沒有斷訊
+    command.push_back(type);//開口
+    command.push_back('E');
+    command.push_back('N');
+    command.push_back('D');
+
+
+    return_cmd = command;
+    count++;
+    if(count == 256)
+    {
+        count = 0;
+    }
+}
+
+void sendrev::RevProcess_IVAM_Car_vw(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W)
+{
+    if(rev_buf[0] == 'E' && rev_buf[1] == 'C'  && rev_buf[10] == 'E')
+    {
+        int HighByte_integer_v = rev_buf[2];
+        int LowByte_integer_v = rev_buf[3];
+        int HighByte_float_v = rev_buf[4];
+        int LowByte_float_v = rev_buf[5];
+
+        int HighByte_integer_w = rev_buf[6];
+        int LowByte_integer_w = rev_buf[7];
+        int HighByte_float_w = rev_buf[8];
+        int LowByte_float_w = rev_buf[9];
+
+        int integer_v = HighByte_integer_v * 256 + LowByte_integer_v;
+        int float_v = HighByte_float_v * 256 + LowByte_float_v;
+        int integer_w = HighByte_integer_w * 256 + LowByte_integer_w;
+        int float_w = HighByte_float_w * 256 + LowByte_float_w;
+
+        float V = integer_v + float_v * 0.001;
+        float W = integer_w + float_w * 0.001;
+
+        Rev_V = V - 20;
+        Rev_W = W - 20;
+    }
+//std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<std::endl;
+
+}
 
 void sendrev::Package_ChinaMotor(int &FL, int &FLA,int &BL,int &BLA,int &FR ,int &FRA,int &BR,int &BRA,std::vector<unsigned char> &return_cmd )
 {
@@ -259,83 +413,9 @@ void sendrev::Package_ChinaMotor(int &FL, int &FLA,int &BL,int &BLA,int &FR ,int
 
 }
 
-void sendrev::Package_allWheel_encoder(double cmd_vx, double cmd_vy, double cmd_w, int type, std::vector<unsigned char> &return_cmd)//測試公版沒有vy就是0
+void sendrev::RevProcess_Boling_onewheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th)
 {
-    //std::cout<<"cmd_vx: "<<cmd_vx<<std::endl;
-    std::cout<<"cmd_vx: "<<cmd_vx<<" cmd_w: "<<cmd_w<<" type: "<<type<<std::endl;
-
-    double send_vx = cmd_vx + 100.0;
-    double send_vy = cmd_vy + 100.0;
-    double send_w = cmd_w + 100.0;
-    static unsigned char count = 0;
-
-    std::vector<unsigned char> command;
-
-    int integer_vx = (int(send_vx));
-    int float_vx = ( int((send_vx - double(integer_vx))*1000 ));
-    int integer_vy = (int(send_vy));
-    int float_vy = ( int((send_vy - double(integer_vy))*1000 ));
-    int integer_w = (int(send_w));
-    int float_w = ( int((send_w - double(integer_w))*1000 ));
-
-    int HighByte_integer_vx = integer_vx/256;
-    int LowByte_integer_vx  = integer_vx%256;
-    int HighByte_float_vx   = float_vx/256;
-    int LowByte_float_vx    = float_vx%256;
-
-    int HighByte_integer_vy = integer_vy/256;
-    int LowByte_integer_vy  = integer_vy%256;
-    int HighByte_float_vy   = float_vy/256;
-    int LowByte_float_vy    = float_vy%256;
-
-    int HighByte_integer_w = integer_w/256;
-    int LowByte_integer_w  = integer_w%256;
-    int HighByte_float_w   = float_w/256;
-    int LowByte_float_w    = float_w%256;
-
-    int checksum = HighByte_integer_vx + LowByte_integer_vx + HighByte_float_vx + LowByte_float_vx + HighByte_integer_vy + LowByte_integer_vy + HighByte_float_vy + LowByte_float_vy + HighByte_integer_w + LowByte_integer_w + HighByte_float_w + LowByte_float_w;
-
-    if(type == 1)
-    {
-        HighByte_float_vx = 0;
-        LowByte_float_vx = 0;
-        HighByte_float_vy = 0;
-        LowByte_float_vy = 0;
-        HighByte_float_w = 0;
-        LowByte_float_w = 0;
-    }
-    command.push_back('S');
-    command.push_back('T');
-    command.push_back(HighByte_integer_vx);
-    command.push_back(LowByte_integer_vx);
-    command.push_back(HighByte_float_vx);
-    command.push_back(LowByte_float_vx);
-    command.push_back(HighByte_integer_vy);
-    command.push_back(LowByte_integer_vy);
-    command.push_back(HighByte_float_vy);
-    command.push_back(LowByte_float_vy);
-    command.push_back(HighByte_integer_w);
-    command.push_back(LowByte_integer_w);
-    command.push_back(HighByte_float_w);
-    command.push_back(LowByte_float_w);
-    command.push_back(checksum);
-    command.push_back(count);//判斷有沒有斷訊
-    command.push_back(type);//開口
-    command.push_back('E');
-    command.push_back('N');
-    command.push_back('D');
-
-
-    return_cmd = command;
-    count++;
-    if(count == 256)
-    {
-        count = 0;
-    }
-}
-
-void sendrev::RevProcess_IVAM_Car_vw(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W)
-{
+    //static int count = 0;
     if(rev_buf[0] == 'E' && rev_buf[1] == 'C'  && rev_buf[10] == 'E')
     {
         int HighByte_integer_v = rev_buf[2];
@@ -343,92 +423,87 @@ void sendrev::RevProcess_IVAM_Car_vw(std::vector<unsigned char> &rev_buf,float &
         int HighByte_float_v = rev_buf[4];
         int LowByte_float_v = rev_buf[5];
 
-        int HighByte_integer_w = rev_buf[6];
-        int LowByte_integer_w = rev_buf[7];
-        int HighByte_float_w = rev_buf[8];
-        int LowByte_float_w = rev_buf[9];
+        int HighByte_integer_th = rev_buf[6];
+        int LowByte_integer_th = rev_buf[7];
+        int HighByte_float_th = rev_buf[8];
+        int LowByte_float_th = rev_buf[9];
 
         int integer_v = HighByte_integer_v * 256 + LowByte_integer_v;
         int float_v = HighByte_float_v * 256 + LowByte_float_v;
+        int integer_th = HighByte_integer_th * 256 + LowByte_integer_th;
+        int float_th = HighByte_float_th * 256 + LowByte_float_th;
+
+        float V = integer_v + float_v * 0.001;
+        float th = integer_th + float_th * 0.001;
+
+        // float loc_Rev_V = V - 20;
+        // float loc_Rev_W = W - 20;
+        Rev_V = V - 20;
+        Rev_th = th - 20;
+        //濾波用
+        // if(count==0)
+        // {
+        //     count++;
+        // }
+        // else
+        // {
+        //     count = 1;
+        //     if(loc_Rev_V > 0.5 || loc_Rev_V < -0.5) Rev_V = last_Rev_V;
+        //     else Rev_V = loc_Rev_V;
+        //     if(loc_Rev_W > 0.35 || loc_Rev_W < -0.35) Rev_W = last_Rev_W;
+        //     else Rev_W = loc_Rev_W;
+        //     // if(fabs(loc_Rev_V - last_Rev_V) > 0.1) loc_Rev_V = last_Rev_V;
+        //     //
+        //     // if(fabs(loc_Rev_W - last_Rev_W) > 0.05) loc_Rev_W = last_Rev_W;
+        //     //
+        //     // Rev_V = loc_Rev_V;
+        //     // Rev_W = loc_Rev_W;
+        // }
+        // last_Rev_V = Rev_V;
+        // last_Rev_W = Rev_W;
+        //std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<std::endl;
+      }
+    //std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<std::endl;
+
+}
+
+void sendrev::RevProcess_allWheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type)
+{
+    //static int count = 0;
+    if(rev_buf[0] == 'E' && rev_buf[1] == 'C'  && rev_buf[15] == 'E')
+    {
+        int HighByte_integer_v = rev_buf[2];
+        int LowByte_integer_v = rev_buf[3];
+        int HighByte_float_v = rev_buf[4];
+        int LowByte_float_v = rev_buf[5];
+
+        int HighByte_integer_th = rev_buf[6];
+        int LowByte_integer_th = rev_buf[7];
+        int HighByte_float_th = rev_buf[8];
+        int LowByte_float_th = rev_buf[9];
+
+        int HighByte_integer_w = rev_buf[10];
+        int LowByte_integer_w = rev_buf[11];
+        int HighByte_float_w = rev_buf[12];
+        int LowByte_float_w = rev_buf[13];
+
+        int integer_v = HighByte_integer_v * 256 + LowByte_integer_v;
+        int float_v = HighByte_float_v * 256 + LowByte_float_v;
+        int integer_th = HighByte_integer_th * 256 + LowByte_integer_th;
+        int float_th = HighByte_float_th * 256 + LowByte_float_th;
         int integer_w = HighByte_integer_w * 256 + LowByte_integer_w;
         int float_w = HighByte_float_w * 256 + LowByte_float_w;
 
         float V = integer_v + float_v * 0.001;
+        float th = integer_th + float_th * 0.001;
         float W = integer_w + float_w * 0.001;
 
-        Rev_V = V - 20;
-        Rev_W = W - 20;
-    }
-//std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<std::endl;
-
-}
-
-void sendrev::Package_Boling_yellow(double v, double th,unsigned char &return_cmd,int &nByte)
-{
-
-
-    double send_v = v + 20.0;
-    double send_th = th + 100.0;
-
-    unsigned char command[13];
-
-    //std::cout<<"send_vl: "<<send_vl<<std::endl;
-    //std::cout<<"send_vr: "<<send_vr<<std::endl;
-
-
-
-    int integer_v = (int(send_v));
-    int float_v = ( int((send_v - double(integer_v))*1000 ));
-    int integer_th = (int(send_th));
-    int float_th = ( int((send_th - double(integer_th))*1000 ));
-
-
-    int HighByte_integer_v = integer_v/128;
-    int LowByte_integer_v  = integer_v%128;
-    int HighByte_float_v   = float_v/128;
-    int LowByte_float_v    = float_v%128;
-
-    int HighByte_integer_th = integer_th/128;
-    int LowByte_integer_th  = integer_th%128;
-    int HighByte_float_th   = float_th/128;
-    int LowByte_float_th    = float_th%128;
-
-
-    command[ 0] = 'S';
-    command[ 1] = 'A';
-    command[ 2] = HighByte_integer_v;
-    command[ 3] = LowByte_integer_v;
-    command[ 4] = HighByte_float_v;
-    command[ 5] = LowByte_float_v;
-    command[ 6] = HighByte_integer_th;
-    command[ 7] = LowByte_integer_th;
-    command[ 8] = HighByte_float_th;
-    command[ 9] = LowByte_float_th;
-    command[10] = 'E';
-    command[11] = 'N';
-    command[12] = 'D';
-
-    nByte = 13;
-    return_cmd = *command;
-
-
-    // int nByte = 0;
-    // if(mySerial.serial_ok){
-    //    nByte = write(mySerial.fd,command,13);
-    //    ROS_INFO("AAA  %d", nByte);
-    //    std::cout<<"command  "<<command[0]<<std::endl;
-    // }
-}
-void sendrev::RevProcess_two_wheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W)
-{
-    switch(mode)
-    {
-        case IVAM_Car_vw:
-            RevProcess_IVAM_Car_vw(rev_buf, Rev_V, Rev_W);
-            break;
-        default:
-            break;
-    }
+        Rev_V = V - 100;
+        Rev_th = th - 100;
+        Rev_W = W - 100;
+        type = int(rev_buf[14]);
+      }
+      //std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<" Rev_th =  "<<Rev_th<<std::endl;
 }
 
 void sendrev::RevProcess_AllDir_encoder(std::vector<unsigned char> &rev_buf,float &Rev_FR_rpm,float &Rev_FL_rpm,float &Rev_RR_rpm,float &Rev_RL_rpm,float &Rev_FR_deg,float &Rev_FL_deg,float &Rev_RR_deg,float &Rev_RL_deg)
@@ -443,46 +518,77 @@ void sendrev::RevProcess_AllDir_encoder(std::vector<unsigned char> &rev_buf,floa
     }
 }
 
-void sendrev::RevProcess_publicWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type)
+void sendrev::RevProcess_OneWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th)
 {
     switch(mode)
     {
-        case public_wheel:
-            RevProcess_allWheel(rev_buf, Rev_V, Rev_W);
+        case Boling_onewheel:
+            RevProcess_Boling_onewheel(rev_buf, Rev_V, Rev_th);
             break;
         default:
             break;
     }
 }
 
-void sendrev::RevProcess_allWheel(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_W)
+void sendrev::RevProcess_testWheel_encoder(std::vector<unsigned char> &rev_buf,float &Rev_V, float &Rev_th, float &Rev_W, int &type)
 {
-    //static int count = 0;
-    if(rev_buf[0] == 'E' && rev_buf[1] == 'C'  && rev_buf[10] == 'E')
+    switch(mode)
     {
-        int HighByte_integer_v = rev_buf[2];
-        int LowByte_integer_v = rev_buf[3];
-        int HighByte_float_v = rev_buf[4];
-        int LowByte_float_v = rev_buf[5];
+        case test_wheel:
+            RevProcess_allWheel(rev_buf, Rev_V, Rev_th, Rev_W, type);
+            break;
+        default:
+            break;
+    }
+}
 
-        int HighByte_integer_w = rev_buf[6];
-        int LowByte_integer_w = rev_buf[7];
-        int HighByte_float_w = rev_buf[8];
-        int LowByte_float_w = rev_buf[9];
+void sendrev::Package_IVAM_Car_vw(double &cmd_v, double &cmd_w,std::vector<unsigned char> &return_cmd)
+{
 
-        int integer_v = HighByte_integer_v * 256 + LowByte_integer_v;
-        int float_v = HighByte_float_v * 256 + LowByte_float_v;
+    std::cout<<"cmd_v: "<<cmd_v<<" cmd_W: "<<cmd_w<<std::endl;
+    double send_v = cmd_v + 20.0;
+    double send_w = cmd_w + 20.0;
 
-        int integer_w = HighByte_integer_w * 256 + LowByte_integer_w;
-        int float_w = HighByte_float_w * 256 + LowByte_float_w;
+    std::vector<unsigned char> command;
+    // std::cout<<"send_v: "<<send_v<<std::endl;
+    // std::cout<<"send_w: "<<send_w<<std::endl;
 
-        float V = integer_v + float_v * 0.001;
-        float W = integer_w + float_w * 0.001;
 
-        Rev_V = V - 100;
-        Rev_W = W - 100;
-      }
-      //std::cout<<"Rev_V = "<<Rev_V<<" "<<" Rev_W =  "<<Rev_W<<std::endl;
+
+    int integer_v = (int(send_v));
+    int float_v = ( int((send_v - double(integer_v))*1000 ));
+    int integer_w = (int(send_w));
+    int float_w = ( int((send_w - double(integer_w))*1000 ));
+
+
+    int HighByte_integer_v = integer_v/256;
+    int LowByte_integer_v  = integer_v%256;
+    int HighByte_float_v   = float_v/256;
+    int LowByte_float_v    = float_v%256;
+
+    int HighByte_integer_w = integer_w/256;
+    int LowByte_integer_w  = integer_w%256;
+    int HighByte_float_w   = float_w/256;
+    int LowByte_float_w    = float_w%256;
+
+
+    command.push_back('S');
+    command.push_back('T');
+    command.push_back(HighByte_integer_v);
+    command.push_back(LowByte_integer_v);
+    command.push_back(HighByte_float_v);
+    command.push_back(LowByte_float_v);
+    command.push_back(HighByte_integer_w);
+    command.push_back(LowByte_integer_w);
+    command.push_back(HighByte_float_w);
+    command.push_back(LowByte_float_w);
+    command.push_back('E');
+    command.push_back('N');
+    command.push_back('D');
+
+
+
+    return_cmd = command;
 }
 
 void sendrev::RevProcess_ChinaMotor(std::vector<unsigned char> &rev_buf,float &Rev_FR_rpm,float &Rev_FL_rpm,float &Rev_RR_rpm,float &Rev_RL_rpm,float &Rev_FR_deg,float &Rev_FL_deg,float &Rev_RR_deg,float &Rev_RL_deg)
@@ -738,158 +844,6 @@ void sendrev::RevProcess_ChinaMotor(std::vector<unsigned char> &rev_buf,float &R
 						rev_buf.clear();
 
                     }
-
-
-
-}
-
-void sendrev::Package_IVAM_Car_vlvr(double &cmd_vl, double &cmd_vr,std::vector<unsigned char> &return_cmd)
-{
-    double send_vl = cmd_vl + 20.0;
-    double send_vr = cmd_vr + 20.0;
-
-    std::vector<unsigned char> command;
-    //std::cout<<"send_vl: "<<send_vl<<std::endl;
-    //std::cout<<"send_vr: "<<send_vr<<std::endl;
-
-
-
-    int integer_vl = (int(send_vl));
-    int float_vl = ( int((send_vl - double(integer_vl))*1000 ));
-    int integer_vr = (int(send_vr));
-    int float_vr = ( int((send_vr - double(integer_vr))*1000 ));
-
-
-    int HighByte_integer_vl = integer_vl/256;
-    int LowByte_integer_vl  = integer_vl%256;
-    int HighByte_float_vl   = float_vl/256;
-    int LowByte_float_vl    = float_vl%256;
-
-    int HighByte_integer_vr = integer_vr/256;
-    int LowByte_integer_vr  = integer_vr%256;
-    int HighByte_float_vr   = float_vr/256;
-    int LowByte_float_vr    = float_vr%256;
-
-
-
-    command.push_back('S');
-    command.push_back('T');
-    command.push_back(HighByte_integer_vl);
-    command.push_back(LowByte_integer_vl);
-    command.push_back(HighByte_float_vl);
-    command.push_back(LowByte_float_vl);
-    command.push_back(HighByte_integer_vr);
-    command.push_back(LowByte_integer_vr);
-    command.push_back(HighByte_float_vr);
-    command.push_back(LowByte_float_vr);
-    command.push_back('E');
-    command.push_back('N');
-    command.push_back('D');
-
-
-
-    return_cmd = command;
-
-
-}
-
-void sendrev::Package_IVAM_Car_vw(double &cmd_v, double &cmd_w,std::vector<unsigned char> &return_cmd)
-{
-
-    // std::cout<<"cmd_v: "<<cmd_v<<std::endl;
-    // std::cout<<"cmd_w: "<<cmd_w<<std::endl;
-    double send_v = cmd_v + 20.0;
-    double send_w = cmd_w + 20.0;
-
-    std::vector<unsigned char> command;
-    // std::cout<<"send_v: "<<send_v<<std::endl;
-    // std::cout<<"send_w: "<<send_w<<std::endl;
-
-
-
-    int integer_v = (int(send_v));
-    int float_v = ( int((send_v - double(integer_v))*1000 ));
-    int integer_w = (int(send_w));
-    int float_w = ( int((send_w - double(integer_w))*1000 ));
-
-
-    int HighByte_integer_v = integer_v/256;
-    int LowByte_integer_v  = integer_v%256;
-    int HighByte_float_v   = float_v/256;
-    int LowByte_float_v    = float_v%256;
-
-    int HighByte_integer_w = integer_w/256;
-    int LowByte_integer_w  = integer_w%256;
-    int HighByte_float_w   = float_w/256;
-    int LowByte_float_w    = float_w%256;
-
-
-    command.push_back('S');
-    command.push_back('T');
-    command.push_back(HighByte_integer_v);
-    command.push_back(LowByte_integer_v);
-    command.push_back(HighByte_float_v);
-    command.push_back(LowByte_float_v);
-    command.push_back(HighByte_integer_w);
-    command.push_back(LowByte_integer_w);
-    command.push_back(HighByte_float_w);
-    command.push_back(LowByte_float_w);
-    command.push_back('E');
-    command.push_back('N');
-    command.push_back('D');
-
-
-
-    return_cmd = command;
-}
-void sendrev::Package_Boling_smallgray(double &cmd_vl, double &cmd_vr,std::vector<unsigned char> &return_cmd)
-{
-
-
-    double send_vl = -1*cmd_vl + 20.0;
-    double send_vr = -1*cmd_vr + 20.0;
-
-    std::vector<unsigned char> command;
-
-    std::cout<<"send_vl: "<<send_vl<<std::endl;
-    std::cout<<"send_vr: "<<send_vr<<std::endl;
-
-
-
-    int integer_vl = (int(send_vl));
-    int float_vl = ( int((send_vl - double(integer_vl))*1000 ));
-    int integer_vr = (int(send_vr));
-    int float_vr = ( int((send_vr - double(integer_vr))*1000 ));
-
-
-    int HighByte_integer_vl = integer_vl/128;
-    int LowByte_integer_vl  = integer_vl%128;
-    int HighByte_float_vl   = float_vl/128;
-    int LowByte_float_vl    = float_vl%128;
-
-    int HighByte_integer_vr = integer_vr/128;
-    int LowByte_integer_vr  = integer_vr%128;
-    int HighByte_float_vr   = float_vr/128;
-    int LowByte_float_vr    = float_vr%128;
-
-
-    command.push_back('S');
-    command.push_back('A');
-    command.push_back(HighByte_integer_vr);
-    command.push_back(LowByte_integer_vr);
-    command.push_back(HighByte_float_vr);
-    command.push_back(LowByte_float_vr);
-    command.push_back(HighByte_integer_vl);
-    command.push_back(LowByte_integer_vl);
-    command.push_back(HighByte_float_vl);
-    command.push_back(LowByte_float_vl);
-    command.push_back('E');
-    command.push_back('N');
-    command.push_back('D');
-
-
-
-    return_cmd = command;
 
 
 

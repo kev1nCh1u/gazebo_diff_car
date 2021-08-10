@@ -10,15 +10,15 @@
 class Car_Kinematics
 {
 public:
-	void two_wheel_Kinematics(float V, float w,  float &vl, float &vr);
-        void four_wheel_Kinematics_rpm(float Vx, float Vy, float W_rw, float Rev_odom_t1, float Rev_odom_t2, float Rev_odom_t3, float Rev_odom_t4, std::vector<int> &rpm, std::vector<int> &theta); //Vx Vy W_rw  vector順序 左前開始逆時針 ,theta 回傳+-1800
+	
+    void four_wheel_Kinematics_rpm(float Vx, float Vy, float W_rw, float Rev_odom_t1, float Rev_odom_t2, float Rev_odom_t3, float Rev_odom_t4, std::vector<int> &rpm, std::vector<int> &theta); //Vx Vy W_rw  vector順序 左前開始逆時針 ,theta 回傳+-1800
 	void setCar_Par(float l_two, float wheel_r_four, float reduction_ratio_four, float wheel_half_length_four, float wheel_half_weight_four);
 	void closeth(float &V, float &t, float Rev_odom_t);
 	void closeth(float &t, float Rev_odom_t);
         
 
 
-private: //（可用繼承 後面再改）
+private: 
 
         //two_wheel
         float l;                        //輪距
@@ -43,11 +43,6 @@ void Car_Kinematics::setCar_Par(float l_two, float wheel_r_four, float reduction
 
 }
 
-void Car_Kinematics::Car_Kinematics::two_wheel_Kinematics(float V, float w,  float &vl, float &vr)
-{
-	vl = V - w*l/2;
-	vr = V + w*l/2;
-}
 void Car_Kinematics::four_wheel_Kinematics_rpm(float Vx, float Vy, float W_rw, float Rev_odom_t1, float Rev_odom_t2, float Rev_odom_t3, float Rev_odom_t4, std::vector<int>&rpm, std::vector<int>&theta)
 {
 
