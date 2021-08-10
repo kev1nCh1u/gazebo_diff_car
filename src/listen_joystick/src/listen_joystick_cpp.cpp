@@ -1,8 +1,8 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
-#include "JoyStick/joystick.h"
+#include "listen_joystick/joystick.h"
 
-void chatterCallback(const JoyStick::joystick::ConstPtr& msg)
+void chatterCallback(const listen_joystick::joystick::ConstPtr& msg)
 {
   ROS_INFO("x: [%f]", msg->x);
 }
