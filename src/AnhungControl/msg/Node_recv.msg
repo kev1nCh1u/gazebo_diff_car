@@ -12,3 +12,5 @@ int8 line
 float32 radius
 string map
 int8 floor
+string turn_info
+bool use_backtra

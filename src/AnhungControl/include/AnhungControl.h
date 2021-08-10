@@ -17,8 +17,10 @@
 #include <AnhungControl/state.h>
 #include <AnhungControl/joystick.h>
 #include <AnhungControl/Battery.h>
+#include <AnhungControl/qrcode.h>
 #include <AnhungControl/setmap_ctr.h>
 #include <std_msgs/Int8.h>
+#include <std_msgs/Int16.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Float32.h>
 
@@ -80,7 +82,7 @@
 #define PUSE_BUTTON_START 7
 #define CarParameterPATH_Local "/src/move_robot/parameter/car_parameter"
 #define LocalparPATH_Local "/src/move_robot/parameter/local_parameter"
-#define imagePATH_Local "/ros_map/ivam_1F_0.pgm"
+#define imagePATH_Local "/ros_map/ivam_3F.pgm"
 
 #define ReloadCarParameter 0
 #define ReloadLocalParameter 1
@@ -99,6 +101,7 @@ struct NODE_recv{
 	float radius;
 	std::string map;
 	int floor;
+	bool use_backtra;
 
 	Eigen::Vector3f node_pose;
 };
@@ -173,6 +176,7 @@ public:
 	void ReMissionStateCallback(const std_msgs::Int8& msg);
 	void BatteryCallback(const AnhungControl::Battery& msg);
 	void MapnameCallback(const std_msgs::String& msg);
+	void mission_disCallback(const std_msgs::Float32& msg);
 
 	void ErrorState(int i);
 	void vCallback(const std_msgs::Float32& msg);
@@ -226,6 +230,7 @@ private:
 	ros::Subscriber ReMissionStateSubscriber_;
 	ros::Subscriber BatterySubscriber_;
 	ros::Subscriber MapnameSubscriber_;
+	ros::Subscriber mission_disSubscriber_;
 
 	ros::Publisher Command_Publisher_;;
 	ros::Publisher IdType_Publisher_;
@@ -233,13 +238,12 @@ private:
 	ros::Publisher  Clear_ObsMode_Publisher_;
 	ros::Publisher Path_Publisher_;
 	ros::Publisher Trigger_Publisher_;
+	ros::Publisher qrcode_Publisher_;
 	ros::Publisher floor_Publisher_;
 
 	boost::thread* recv_command_thread_;
 
 	struct sockaddr_in si_other_, si_me_, si_BROADCAST;
-	char *IP;
-	int Port;
 
 	int sfd_, slen_, clientlen;
 
@@ -250,6 +254,7 @@ private:
 	bool isSetMapTrans;
 
 	float map_resloution;
+
 	float map_width_size, map_height_size;
 	std::string Mapname;
 
@@ -278,6 +283,7 @@ private:
 	std::string Name_buf;
 
 	float V_now ;
+	float mission_dis_now;
 	bool SendNode;
 	bool protect_SendNode;
 
@@ -336,5 +342,8 @@ private:
 	int all_missiontime ;
 	int missiontime;
 	std::string time_path;
+	float all_dis;
+	//模擬qrcode訊號
+	int16_t qrcode_id;
 
 };

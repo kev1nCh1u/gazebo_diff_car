@@ -501,7 +501,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 								std_msgs::Int16 msg_missing;
 
 								//std::cout<<"slamProcessor->ProbMapping"<<slamProcessor->ProbMapping<<std::endl;
-								if(slamProcessor->ProbMapping <= 0.15){
+								if(slamProcessor->ProbMapping <= 0.35){
 									msg_missing.data = 1;
 									//std::cout<<"missing  "<<std::endl;
 								}
@@ -564,12 +564,12 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 								tfB_->sendTransform( tf::StampedTransform (map_to_odom_, device_scan_1.header.stamp, p_map_frame_, p_odom_frame_));
 							}
 
-							if(slamProcessor->ProbMapping >= 0.4){
+							if(slamProcessor->ProbMapping >= 0.55){
 								ROS_INFO("Finish Position Initial");
 								p_control_state_ = P_SLAM_STATE_RUN;
 								p_Relocation_ = false;
 
-
+								
 								std_msgs::Int8 msg;
 								msg.data = 100;
 								floor_Publisher_.publish(msg);
@@ -697,7 +697,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 								if(p_navigation_){
 									std_msgs::Int16 msg_missing;
 									//std::cout<<"slamProcessor->ProbMapping"<<slamProcessor->ProbMapping<<std::endl;
-									if(slamProcessor->ProbMapping <= 0.15){
+									if(slamProcessor->ProbMapping <= 0.35){
 										msg_missing.data = 1;
 										//std::cout<<"missing  "<<std::endl;
 									}
@@ -760,7 +760,7 @@ void HectorMappingRos::scanCallback(const sensor_msgs::LaserScan& scan)
 								}
 								//std::cout<<"send Finish Position Initial"<<slamProcessor->ProbMapping<<std::endl;
 								//std::cout<<"mapping rate2 = "<<slamProcessor->ProbMapping<<std::endl;
-								if(slamProcessor->ProbMapping >= 0.4){
+								if(slamProcessor->ProbMapping >= 0.35){
 									ROS_INFO("Finish Position Initial");
 									p_control_state_ = P_SLAM_STATE_RUN;
 									p_Relocation_ = false;
@@ -1291,7 +1291,7 @@ void HectorMappingRos::LoadMap(std::string Map_Name)
 
 		std::string s_image;
 		std::string s_image_path;
-		s_image_path = TitlePath + P_MAP_LOAD_PATH + Map_Name + P_MAP_IMAGE_ViceName;	
+		s_image_path = TitlePath + P_MAP_LOAD_PATH + Map_Name + P_MAP_IMAGE_ViceName;
 		s_image = "s_image "+ s_image_path;
 		std::cout<<s_image<<std::endl;
 
@@ -1938,21 +1938,25 @@ void HectorMappingRos::NormalizeAngle(float& phi)
 void HectorMappingRos::LoadTitlePath()
 {
 	std::string NOWPath = ros::package::getPath("hector_mapping");
+	std::cout<<"NOWPath: " <<NOWPath <<std::endl;
 
 	std::string PATH_par;
 	std::string recv_pkg[100];
 
 	int count=0;
-	std::stringstream cut(NOWPath);
-	while(getline(cut,PATH_par,'/'))
-	{
-		recv_pkg[count]=PATH_par;
-		std::cout<<" recv_pkg= "<<count << " "<< recv_pkg[count]<<std::endl;
-		count++;
-	}
+    std::stringstream cut(NOWPath);
+    while(getline(cut,PATH_par,'/'))
+    {
+        recv_pkg[count]=PATH_par;
+        count++;
+    }
 
-	TitlePath = "/" + recv_pkg[1] + "/" + recv_pkg[2] + "/" + recv_pkg[3]+ "/" + recv_pkg[4];
-	std::cout<<"TitlePath  " <<TitlePath <<std::endl;
+	// TitlePath = "/" + recv_pkg[1] + "/" + recv_pkg[2] + "/" + recv_pkg[3];
+    for(int i=1; i<count-3; i++){ // kevin
+        TitlePath += "/" + recv_pkg[i];
+    }
+	
+	std::cout<<"TitlePath: " <<TitlePath <<std::endl;
 
 }
 void HectorMappingRos::automappingForChangeMap(Eigen::Vector3f ini_pose)

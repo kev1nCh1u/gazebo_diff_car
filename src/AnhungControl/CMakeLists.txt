@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   geometry_msgs
   roslib
+
 )
 
 find_package(qt_build)
@@ -87,6 +88,7 @@ traffic_recv.msg
 state.msg
 joystick.msg
 Battery.msg
+qrcode.msg
 setmap_ctr.msg
  )
 
@@ -245,14 +247,14 @@ add_definitions(${MYSQL_DEFINITIONS})
 
 add_executable(AnhungControl src/AnhungControl.cpp)
 
-if(qt_build_FOUND)
+if(NOT qt_build_FOUND)
   target_link_libraries(AnhungControl ${QT_LIBRARIES})
 endif()
 
 target_link_libraries(AnhungControl
 #  ${QT_LIBRARIES} 
   ${catkin_LIBRARIES}
-${MYSQL_LIBRARIES}
+  ${MYSQL_LIBRARIES}
 )
 
 
