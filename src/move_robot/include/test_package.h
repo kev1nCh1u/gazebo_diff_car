@@ -1182,6 +1182,16 @@ bool test_package::Tracking_Angle_Init(int &subpath_index, bool isReSet)
 		// 		command
 		// 		);
 
+				// kevin
+		geometry_msgs::Twist cmd_vel_msg;
+			cmd_vel_msg.linear.x = V_avg;
+			cmd_vel_msg.linear.y = 0;
+			cmd_vel_msg.linear.z = 0;
+			cmd_vel_msg.angular.x = 0;
+			cmd_vel_msg.angular.y = 0;
+			cmd_vel_msg.angular.z = W_rw;
+			cmd_vel_pub.publish(cmd_vel_msg);
+
 		SendPackage(command);
 
 		//std::cout<<"rpm   "<<rpm[0]<<std::endl;
@@ -2166,6 +2176,15 @@ W_rw = 0;
         sendreceive.Package_Diff_encoder(-1 * V_rv,W_rw,command);
     }
 
+				// kevin
+		geometry_msgs::Twist cmd_vel_msg;
+			cmd_vel_msg.linear.x = V_avg;
+			cmd_vel_msg.linear.y = 0;
+			cmd_vel_msg.linear.z = 0;
+			cmd_vel_msg.angular.x = 0;
+			cmd_vel_msg.angular.y = 0;
+			cmd_vel_msg.angular.z = W_rw;
+			cmd_vel_pub.publish(cmd_vel_msg);
 
 		SendPackage(command);
 
