@@ -41,7 +41,8 @@ https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
     sudo ./install_ipopt.sh Ipopt-3.12.7
 
 ## hector slam
-    rostopic pub /Command std_msgs/String "Create Map"
+    rostopic pub /Command hector_mapping/setmap_hec "{type: 'Create Map', Name: '', ini_pose_x: 0.0, ini_pose_y: 0.0, ini_pose_z: 0.0}"
+    rostopic pub /Command hector_mapping/setmap_hec "{type: 'Save Map', Name: 'qq', ini_pose_x: 0.0, ini_pose_y: 0.0, ini_pose_z: 0.0}"
     rostopic pub /Command std_msgs/String "Load Map"
     rostopic pub /syscommand std_msgs/String "reset"
     rostopic pub /Command std_msgs/String "navigation=true"
