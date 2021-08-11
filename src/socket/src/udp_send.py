@@ -7,12 +7,9 @@ UDP_IP = "127.0.0.1"
 # UDP_IP = "221.120.83.108"
 
 UDP_PORT = 9930
-# MESSAGE = b"Hello, World!"
-# MESSAGE = b"Mr;1,0,1.73,0.43,1.74,diff,0,0.5,ivam_3F;2,3,2.48,-5.01,1.74,diff,0,0.5,ivam_3F,2;E" #line
-# MESSAGE = b"Mr;1,0,-0.17,-0.44,0.10,diff,1,0.5,ivam_3F;2,1,3.61,0.35,1.68,diff,0,0.5,ivam_3F;3,3,4.01,-3.44,1.68,diff,0,0.5,ivam_3F,2;E" #one turn 
-# MESSAGE = b"Mr;1,0,-0.17,-0.44,0.10,diff,1,0.5,ivam_3F;2,1,3.61,0.35,1.68,diff,1,0.5,ivam_3F;3,1,4.01,-3.44,1.68,diff,0,0.5,ivam_3F;4,3,1.31,-3.73,0.12,diff,0,0.5,ivam_3F,2;E" #two turn
-# MESSAGE = b"Mr;1,0,-0.17,-0.44,0.10,diff,1,0.5,ivam_3F;2,1,3.61,0.35,1.68,diff,0,0.5,ivam_3F;3,1,3.77,-0.85,-1.46,diff,1,0.5,ivam_3F;4,1,4.01,-3.44,1.68,diff,1,0.5,ivam_3F;5,1,1.31,-3.73,0.12,diff,0,0.5,ivam_3F;6,3,0.72,-0.358,-1.45,diff,0,0.5,ivam_3F,2;E" #o turn
-MESSAGE = b"Mr;1,0,2.05, -2.39,1.22,diff,0,0.5,ivam_3F;2,3,2.65, 0.23, 0.74,diff,0,0.5,ivam_3F;4,3, 1.01,-2.98,1.69,diff,0,0.5,ivam_3F,2;E" #switch_test
+MESSAGE = b"Mr;1,0, 0.68, -0.11, 0.98,diff,0,0.5,qq;2,1,1.68, 3.00, -0.99,diff,0,0.5,qq;4,3, 6.43,1.65,0.96,diff,0,0.5,qq,2;E" #switch_test
+# MESSAGE = b"Mr;1,0, -1.93,-0.44,-3.06,diff,0,0.5,ivam_3F;2,3, -1.94, -0.39,0.09,diff,0,0.5,ivam_3F,2;E"
+
 
 print("UDP target IP: %s" % UDP_IP)
 print("UDP target port: %s" % UDP_PORT)
