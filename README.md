@@ -11,13 +11,8 @@ https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
     mkdir .gazebo/models/
     https://github.com/kevin01yaya/gazebo_models
 
-    cd ~/.gazebo/
-    ls
-    mkdir -p models
-    ls
     cd ~/.gazebo/models/
     wget http://file.ncnynl.com/ros/gazebo_models.txt
-    ls
     wget -i gazebo_models.txt
     ls model.tar.g* | xargs -n1 tar xzvf
 
