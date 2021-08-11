@@ -6,9 +6,9 @@
   args="/dev/input/js0"/>
 
 <node name="move_robot" pkg="move_robot" type="move_robot"
-  args="/dev/pts/0 115200" output="screen"//>
+  args="/dev/pts/1 115200" output="screen"/>
 
 <node name="AnhungControl" pkg="AnhungControl" type="AnhungControl"
-  args="192.168.72.224 9930"/>
+  args="192.8.8.8 9930" output="screen"/>
 
 </launch>

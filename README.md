@@ -20,6 +20,7 @@ https://gist.github.com/awesomebytes/982166e825aa23ecdaf9acf34fa0a330
     roslaunch simulation_environment apartment.launch
     rosrun JoyStick joystick /dev/input/js0
     rosrun move_robot move_robot /dev/pts/0 115200
+    rosrun AnhungControl AnhungControl 192.8.8.8 9930
 
 ## diff start all
     roslaunch launch_start start.launch
@@ -54,7 +55,7 @@ topic
     rostopic pub /Command std_msgs/String "ReLoad Map"
 
 ## AnhungControl
-    rosrun AnhungControl AnhungControl 192.168.72.224 9930
+    rosrun AnhungControl AnhungControl 192.8.8.8 9930
 
 Packet
 
