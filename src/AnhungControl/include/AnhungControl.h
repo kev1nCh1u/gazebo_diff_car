@@ -101,7 +101,7 @@ struct NODE_recv{
 	float radius;
 	std::string map;
 	int floor;
-	bool use_backtra;
+	std::string turn_info;
 
 	Eigen::Vector3f node_pose;
 };

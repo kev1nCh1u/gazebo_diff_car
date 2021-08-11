@@ -614,7 +614,7 @@ void Control::RevProcess(double receive_period)
 									if(recv_pkg_subitem[1]=="3" || recv_pkg_subitem[1]=="5" || recv_pkg_subitem[1]=="9" || recv_pkg_subitem[1]=="14") item>>node_buf.time;
 									else if(recv_pkg_subitem[1]=="4" ||recv_pkg_subitem[1]=="6") item>>node_buf.btn_finish;
 									else if(recv_pkg_subitem[1]=="12") item>>node_buf.floor;
-									else if(recv_pkg_subitem[1]=="15" || recv_pkg_subitem[1]=="16" || recv_pkg_subitem[1]=="17" || recv_pkg_subitem[1]=="18") item>>node_buf.use_backtra;
+									else if(recv_pkg_subitem[1]=="15" || recv_pkg_subitem[1]=="16" || recv_pkg_subitem[1]=="17" || recv_pkg_subitem[1]=="18") item>>node_buf.turn_info;
 									else {
 										//std::cout<<"===========QQQQQQQQQQ============="<<std::endl;
 										pkg_wrong=true;
@@ -1213,7 +1213,7 @@ void Control::RevProcess(double receive_period)
 					msg.radius=NodeSet[i].radius;
 					msg.map=NodeSet[i].map;
 					msg.floor=NodeSet[i].floor;
-					msg.use_backtra = NodeSet[i].use_backtra;
+					msg.turn_info = NodeSet[i].turn_info;
 
 					IdType_Publisher_.publish(msg);
 					delay.sleep();
@@ -1257,7 +1257,7 @@ void Control::RevProcess(double receive_period)
 					msg.radius=NodeSet[i].radius;
 					msg.map=NodeSet[i].map;
 					msg.floor=NodeSet[i].floor;
-					msg.use_backtra = NodeSet[i].use_backtra;
+					msg.turn_info = NodeSet[i].turn_info;
 
 					IdType_Publisher_.publish(msg);
 					delay.sleep();
@@ -2334,12 +2334,12 @@ void Control::LoadTitlePath()
 	std::string recv_pkg[100];
 
 	int count=0;
-    std::stringstream cut(NOWPath);
-    while(getline(cut,PATH_par,'/'))
-    {
-        recv_pkg[count]=PATH_par;
-        count++;
-    }
+	std::stringstream cut(NOWPath);
+	while(getline(cut,PATH_par,'/'))
+	{
+		recv_pkg[count]=PATH_par;
+		count++;
+	}
 
 	// TitlePath = "/" + recv_pkg[1] + "/" + recv_pkg[2] + "/" + recv_pkg[3];
     for(int i=1; i<count-2; i++){ // kevin
