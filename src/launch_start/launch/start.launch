@@ -5,9 +5,6 @@
 
 <include file="$(find simulation_environment)/launch/apartment.launch"/>
 
-<node name="joystick" pkg="JoyStick" type="joystick"
-  args="/dev/input/js0"/>
-
 <node name="move_robot" pkg="move_robot" type="move_robot"
   args="/dev/pts/0 115200" output="screen"/>
 
